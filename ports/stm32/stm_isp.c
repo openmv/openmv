@@ -48,7 +48,7 @@
 #define DCMIPP_CCM_OFFSET_MAX   (511)
 
 // Quantizes the blended CCM into the ISP's color conversion block.
-static void stm_isp_update_ccm(omv_csi_t *csi, uint32_t pipe, const uint32_t avg[3], float luminance) {
+static void stm_isp_update_ccm(omv_csi_t *csi, uint32_t pipe, const float avg[3], float luminance) {
     omv_csi_ccm_t ccm;
     int16_t coeffs[3][3];
     int16_t offsets[3];
@@ -100,6 +100,7 @@ static void stm_isp_update_ccm(omv_csi_t *csi, uint32_t pipe, const uint32_t avg
 
 float stm_isp_update_awb(omv_csi_t *csi, uint32_t pipe) {
     uint32_t avg[3];
+    float gain[3];
     uint32_t shift[3];
     uint32_t multi[3];
     float luminance;
@@ -125,15 +126,12 @@ float stm_isp_update_awb(omv_csi_t *csi, uint32_t pipe) {
         omv_csi_stats_update(csi, &avg[0], &avg[1], &avg[2], mp_hal_ticks_ms());
     }
 
-    omv_csi_get_stats(csi, &avg[0], &avg[1], &avg[2]);
+    omv_csi_stats_get_gains(csi, &gain[0], &gain[1], &gain[2]);
 
-    // Normalize to the largest channel so that no gain is below 1 and clipped pixels stay white.
-    float awb_max = OMV_MAX(OMV_MAX(avg[0], avg[1]), avg[2]);
-
-    // Calculate average and exposure factors for each channel (R, G, B)
+    // Calculate the exposure factors for each channel (R, G, B)
     for (int i = 0; i < 3; i++) {
         shift[i] = 0;
-        multi[i] = roundf((awb_max * 128.0f / avg[i]));
+        multi[i] = roundf(gain[i] * 128.0f);
         while (multi[i] >= 255.0f && shift[i] < 7) {
             multi[i] /= 2;
             shift[i]++;
@@ -155,7 +153,9 @@ float stm_isp_update_awb(omv_csi_t *csi, uint32_t pipe) {
     #ifdef OMV_CSI_HW_CCM_ENABLE
     // Grayscale is packed from the green channel, which the CCM would make noisier.
     if (csi->pixformat == PIXFORMAT_RGB565 || csi->pixformat == PIXFORMAT_YUV422) {
-        stm_isp_update_ccm(csi, pipe, avg, luminance);
+        float illuminant[3];
+        omv_csi_stats_get(csi, &illuminant[0], &illuminant[1], &illuminant[2]);
+        stm_isp_update_ccm(csi, pipe, illuminant, luminance);
     }
     #endif // OMV_CSI_HW_CCM_ENABLE
 

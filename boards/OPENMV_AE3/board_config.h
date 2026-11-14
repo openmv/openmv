@@ -272,6 +272,9 @@ extern unsigned char OMV_BOARD_UID_ADDR[12];    // Unique address.
 #define OMV_CSI_BASE                    ((CPI_Type *) CPI_BASE)
 #define OMV_CSI_CLK_FREQUENCY           (24000000)
 #define OMV_CSI_STATS_ENABLE            (1)
+// The software debayer applies the white balance gains in Q5 and limits them to 4x.
+#define OMV_CSI_STATS_GAIN_MIN          (1.0f / 32.0f)
+#define OMV_CSI_STATS_GAIN_MAX          (4.0f)
 
 #define OMV_CSI_D0_PIN                  (&omv_pin_CSI_D0)
 #define OMV_CSI_D1_PIN                  (&omv_pin_CSI_D1)

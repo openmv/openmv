@@ -70,6 +70,18 @@
 #define OMV_CSI_STATS_TAU_MS    (250)
 #endif
 
+// RGB average that maps to a gain of 1.
+#define OMV_CSI_STATS_NEUTRAL   (128.0f)
+
+// Range of the white balance gains that can be applied.
+#ifndef OMV_CSI_STATS_GAIN_MIN
+#define OMV_CSI_STATS_GAIN_MIN  (1.0f / 128.0f)
+#endif
+
+#ifndef OMV_CSI_STATS_GAIN_MAX
+#define OMV_CSI_STATS_GAIN_MAX  (128.0f)
+#endif
+
 #ifndef __weak
 #define __weak    __attribute__((weak))
 #endif
@@ -329,6 +341,10 @@ __weak int omv_csi_reset(omv_csi_t *csi, bool hard) {
     // Enable collecting RGB stats.
     csi->stats_enabled = true;
     memset(&csi->stats, 0, sizeof(omv_csi_stats_t));
+    // Start out neutral until the first update.
+    csi->stats.r_avg = OMV_CSI_STATS_NEUTRAL;
+    csi->stats.g_avg = OMV_CSI_STATS_NEUTRAL;
+    csi->stats.b_avg = OMV_CSI_STATS_NEUTRAL;
     #endif // defined(OMV_CSI_STATS_ENABLE)
 
     // Restore shutdown state on reset.
@@ -1201,12 +1217,70 @@ void omv_csi_stats_update(omv_csi_t *csi, uint32_t *r, uint32_t *g, uint32_t *b,
     }
 }
 
-void omv_csi_get_stats(omv_csi_t *csi, uint32_t *r, uint32_t *g, uint32_t *b) {
+void omv_csi_stats_get(omv_csi_t *csi, float *r, float *g, float *b) {
     omv_csi_stats_t *stats = &csi->stats;
 
-    *r = fast_roundf(stats->r_avg);
-    *g = fast_roundf(stats->g_avg);
-    *b = fast_roundf(stats->b_avg);
+    // Keep the averages usable as divisors.
+    *r = OMV_MAX(stats->r_avg, 1.0f);
+    *g = OMV_MAX(stats->g_avg, 1.0f);
+    *b = OMV_MAX(stats->b_avg, 1.0f);
+}
+
+void omv_csi_stats_get_gains(omv_csi_t *csi, float *r_gain, float *g_gain, float *b_gain) {
+    float r, g, b;
+    omv_csi_stats_get(csi, &r, &g, &b);
+
+    // Normalize to the largest channel so that no gain is below 1 and clipped pixels stay white.
+    float ref = OMV_MAX(OMV_MAX(r, g), b);
+
+    // Manual gains are applied as set.
+    if (csi->stats.manual) {
+        ref = OMV_CSI_STATS_NEUTRAL;
+    }
+
+    *r_gain = IM_CLAMP(ref / r, OMV_CSI_STATS_GAIN_MIN, OMV_CSI_STATS_GAIN_MAX);
+    *g_gain = IM_CLAMP(ref / g, OMV_CSI_STATS_GAIN_MIN, OMV_CSI_STATS_GAIN_MAX);
+    *b_gain = IM_CLAMP(ref / b, OMV_CSI_STATS_GAIN_MIN, OMV_CSI_STATS_GAIN_MAX);
+}
+
+static float omv_csi_stats_gain_db_to_avg(float gain_db) {
+    // The gains are derived from the RGB averages, so store their inverse.
+    float gain = expf((gain_db / 20.0f) * M_LN10);
+    return OMV_CSI_STATS_NEUTRAL / IM_CLAMP(gain, OMV_CSI_STATS_GAIN_MIN, OMV_CSI_STATS_GAIN_MAX);
+}
+
+int omv_csi_stats_set_auto_whitebal(omv_csi_t *csi, int enable,
+                                    float r_gain_db, float g_gain_db, float b_gain_db) {
+    omv_csi_stats_t *stats = &csi->stats;
+
+    csi->stats_enabled = enable;
+
+    if (enable) {
+        if (stats->manual) {
+            // The averages were set from manual gains, so restart them from the next update.
+            stats->manual = false;
+            stats->initialized = false;
+        }
+    } else if ((!isnanf(r_gain_db)) && (!isnanf(g_gain_db)) && (!isnanf(b_gain_db))
+               && (!isinff(r_gain_db)) && (!isinff(g_gain_db)) && (!isinff(b_gain_db))) {
+        stats->manual = true;
+        stats->initialized = true;
+        stats->r_avg = omv_csi_stats_gain_db_to_avg(r_gain_db);
+        stats->g_avg = omv_csi_stats_gain_db_to_avg(g_gain_db);
+        stats->b_avg = omv_csi_stats_gain_db_to_avg(b_gain_db);
+    }
+
+    return 0;
+}
+
+int omv_csi_stats_get_rgb_gain_db(omv_csi_t *csi, float *r_gain_db, float *g_gain_db, float *b_gain_db) {
+    float r_gain, g_gain, b_gain;
+    omv_csi_stats_get_gains(csi, &r_gain, &g_gain, &b_gain);
+
+    *r_gain_db = 20.0f * log10f(r_gain);
+    *g_gain_db = 20.0f * log10f(g_gain);
+    *b_gain_db = 20.0f * log10f(b_gain);
+    return 0;
 }
 #endif // defined(OMV_CSI_STATS_ENABLE)
 
@@ -1218,15 +1292,15 @@ void omv_csi_get_stats(omv_csi_t *csi, uint32_t *r, uint32_t *g, uint32_t *b) {
 
 // Projects the illuminant onto the polyline of calibration illuminants in log
 // chromaticity space and blends the CCMs at the ends of the closest segment (~linear in mired).
-bool omv_csi_ccm_compute(const omv_csi_ccm_table_t *table, const uint32_t rgb[3], float luminance, omv_csi_ccm_t *out) {
+bool omv_csi_ccm_compute(const omv_csi_ccm_table_t *table, const float rgb[3], float luminance, omv_csi_ccm_t *out) {
     if (table == NULL || table->count == 0) {
         return false;
     }
 
     const omv_csi_ccm_t *ccm = table->entries;
-    float g = OMV_MAX(rgb[1], 1);
-    out->chroma[0] = logf(OMV_MAX(rgb[0], 1) / g);
-    out->chroma[1] = logf(OMV_MAX(rgb[2], 1) / g);
+    float g = OMV_MAX(rgb[1], 1.0f);
+    out->chroma[0] = logf(OMV_MAX(rgb[0], 1.0f) / g);
+    out->chroma[1] = logf(OMV_MAX(rgb[2], 1.0f) / g);
 
     size_t idx = 0;
     float t = 0.0f;

@@ -36,7 +36,7 @@
 #include "unittest.h"
 
 // Raw R/G/B averages of the calibration illuminants, warmest to coolest.
-static const uint32_t ccm_rgb[3][3] = {
+static const float ccm_rgb[3][3] = {
     { 100, 100, 50 },
     { 80, 100, 80 },
     { 50, 100, 100 },
@@ -104,8 +104,8 @@ static bool ccm_is_unity(const omv_csi_ccm_t *out) {
 // The compile-time chroma matches logf() at runtime.
 static mp_obj_t test_ccm_chroma(void) {
     for (int i = 0; i < 3; i++) {
-        if (!FLOAT_EQ(ccm_chroma[i][0], logf((float) ccm_rgb[i][0] / ccm_rgb[i][1]), 0.0001f) ||
-            !FLOAT_EQ(ccm_chroma[i][1], logf((float) ccm_rgb[i][2] / ccm_rgb[i][1]), 0.0001f)) {
+        if (!FLOAT_EQ(ccm_chroma[i][0], logf(ccm_rgb[i][0] / ccm_rgb[i][1]), 0.0001f) ||
+            !FLOAT_EQ(ccm_chroma[i][1], logf(ccm_rgb[i][2] / ccm_rgb[i][1]), 0.0001f)) {
             return mp_const_false;
         }
     }
@@ -116,7 +116,7 @@ static MP_DEFINE_CONST_FUN_OBJ_0(test_ccm_chroma_obj, test_ccm_chroma);
 // A missing or empty table leaves the CCM unchanged.
 static mp_obj_t test_ccm_empty(void) {
     omv_csi_ccm_t out;
-    const uint32_t rgb[3] = { 80, 100, 80 };
+    const float rgb[3] = { 80, 100, 80 };
 
     if (omv_csi_ccm_compute(NULL, rgb, 100.0f, &out) || omv_csi_ccm_compute(ccm_table(0), rgb, 100.0f, &out)) {
         return mp_const_false;
@@ -143,8 +143,8 @@ static MP_DEFINE_CONST_FUN_OBJ_0(test_ccm_calibration_points_obj, test_ccm_calib
 // Illuminants past either end of the polyline clamp to the end matrices.
 static mp_obj_t test_ccm_clamp_ends(void) {
     const omv_csi_ccm_table_t *table = ccm_table(3);
-    const uint32_t warm[3] = { 200, 100, 10 };
-    const uint32_t cool[3] = { 10, 100, 200 };
+    const float warm[3] = { 200, 100, 10 };
+    const float cool[3] = { 10, 100, 200 };
     omv_csi_ccm_t out;
 
     if (!omv_csi_ccm_compute(table, warm, 100.0f, &out) || !ccm_equal(&out, &ccm_entries[0], &ccm_entries[0], 0.0f)) {
@@ -165,7 +165,7 @@ static mp_obj_t test_ccm_blend(void) {
     // The log-space midpoint of the first two illuminants.
     float mid0 = (ccm_entries[0].chroma[0] + ccm_entries[1].chroma[0]) / 2.0f;
     float mid1 = (ccm_entries[0].chroma[1] + ccm_entries[1].chroma[1]) / 2.0f;
-    const uint32_t rgb[3] = { fast_roundf(expf(mid0) * 10000.0f), 10000, fast_roundf(expf(mid1) * 10000.0f) };
+    const float rgb[3] = { expf(mid0) * 10000.0f, 10000.0f, expf(mid1) * 10000.0f };
 
     if (!omv_csi_ccm_compute(table, rgb, 100.0f, &out) || !ccm_equal(&out, &ccm_entries[0], &ccm_entries[1], 0.5f)) {
         return mp_const_false;

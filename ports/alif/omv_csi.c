@@ -408,8 +408,8 @@ int alif_csi_snapshot(omv_csi_t *csi, image_t *dst_image, uint32_t flags) {
         // Set the target pixel format before debayer.
         dst_image->pixfmt = fb->pixfmt;
 
-        uint32_t r, g, b;
         if (csi->stats_enabled) {
+            uint32_t r, g, b;
             omv_csi_ioctl_arg_t arg = {0};
             int ret = omv_csi_ioctl(csi, OMV_CSI_IOCTL_GET_RGB_STATS, &arg);
             if (ret != 0) {
@@ -422,10 +422,11 @@ int alif_csi_snapshot(omv_csi_t *csi, image_t *dst_image, uint32_t flags) {
             omv_csi_stats_update(csi, &r, &g, &b, mp_hal_ticks_ms());
         }
 
-        omv_csi_get_stats(csi, &r, &g, &b);
+        float r_gain, g_gain, b_gain;
+        omv_csi_stats_get_gains(csi, &r_gain, &g_gain, &b_gain);
 
         // Debayer frame.
-        imlib_debayer_image_awb(dst_image, &src_image, false, r, g, b);
+        imlib_debayer_image_awb(dst_image, &src_image, false, r_gain, g_gain, b_gain);
     }
     return 0;
 }

@@ -567,8 +567,10 @@ static inline v128_t vdebayer_to_cr(vrgb_pixels_t pixels) {
 // pixels.b = MSB [0, B1, 0, B0] LSB pixels where each pixel is 8-bits.
 //
 // Returns the same.
-static inline vrgb_pixels_t vdebayer_apply_rb_gain(vrgb_pixels_t pixels, uint32_t red_gain, uint32_t blue_gain) {
+static inline vrgb_pixels_t vdebayer_apply_rgb_gain(vrgb_pixels_t pixels,
+                                                    uint32_t red_gain, uint32_t green_gain, uint32_t blue_gain) {
     pixels.r = vusat_s16_narrow_u8_lo(pixels.r, vmul_n_u32(pixels.r, red_gain), 5);
+    pixels.g = vusat_s16_narrow_u8_lo(pixels.g, vmul_n_u32(pixels.g, green_gain), 5);
     pixels.b = vusat_s16_narrow_u8_lo(pixels.b, vmul_n_u32(pixels.b, blue_gain), 5);
     #ifdef IMLIB_ENABLE_GAMMA_LUT
     pixels.r = vldr_u8_gather(gamma_table, pixels.r);
@@ -586,7 +588,7 @@ static inline vrgb_pixels_t vdebayer_apply_rb_gain(vrgb_pixels_t pixels, uint32_
 //
 // Stores 4x Grayscale pixels for every 32-bits.
 static inline void vdebayer_store_packed_grayscale(uint8_t *p, vrgb_pixels_t packed_pixels,
-                                                   uint32_t red_gain, uint32_t blue_gain,
+                                                   uint32_t red_gain, uint32_t green_gain, uint32_t blue_gain,
                                                    int32_t len) {
     vrgb_pixels_t pixels0 = {
         .r = vuxtb16(packed_pixels.r),
@@ -594,7 +596,7 @@ static inline void vdebayer_store_packed_grayscale(uint8_t *p, vrgb_pixels_t pac
         .b = vuxtb16(packed_pixels.b),
     };
 
-    v128_t v0 = vrgb_pixels_to_grayscale(vdebayer_apply_rb_gain(pixels0, red_gain, blue_gain));
+    v128_t v0 = vrgb_pixels_to_grayscale(vdebayer_apply_rgb_gain(pixels0, red_gain, green_gain, blue_gain));
 
     vrgb_pixels_t pixels1 = {
         .r = vuxtb16_ror8(packed_pixels.r),
@@ -602,7 +604,7 @@ static inline void vdebayer_store_packed_grayscale(uint8_t *p, vrgb_pixels_t pac
         .b = vuxtb16_ror8(packed_pixels.b),
     };
 
-    v128_t v1 = vrgb_pixels_to_grayscale(vdebayer_apply_rb_gain(pixels1, red_gain, blue_gain));
+    v128_t v1 = vrgb_pixels_to_grayscale(vdebayer_apply_rgb_gain(pixels1, red_gain, green_gain, blue_gain));
 
     vstr_u8_pred(p, vmov_u16_narrow_u8_hi(v0, v1), vpredicate_8(len));
 }
@@ -615,7 +617,7 @@ static inline void vdebayer_store_packed_grayscale(uint8_t *p, vrgb_pixels_t pac
 //
 // Stores 4x RGB565 pixels for every 32-bits.
 static inline void vdebayer_store_packed_rgb565(uint16_t *p, vrgb_pixels_t packed_pixels,
-                                                uint32_t red_gain, uint32_t blue_gain,
+                                                uint32_t red_gain, uint32_t green_gain, uint32_t blue_gain,
                                                 int32_t len) {
     v2x_rows_t out;
 
@@ -625,7 +627,7 @@ static inline void vdebayer_store_packed_rgb565(uint16_t *p, vrgb_pixels_t packe
         .b = vuxtb16(packed_pixels.b),
     };
 
-    out.r0 = vrgb_pixels_to_rgb565(vdebayer_apply_rb_gain(pixels0, red_gain, blue_gain));
+    out.r0 = vrgb_pixels_to_rgb565(vdebayer_apply_rgb_gain(pixels0, red_gain, green_gain, blue_gain));
 
     vrgb_pixels_t pixels1 = {
         .r = vuxtb16_ror8(packed_pixels.r),
@@ -633,7 +635,7 @@ static inline void vdebayer_store_packed_rgb565(uint16_t *p, vrgb_pixels_t packe
         .b = vuxtb16_ror8(packed_pixels.b),
     };
 
-    out.r1 = vrgb_pixels_to_rgb565(vdebayer_apply_rb_gain(pixels1, red_gain, blue_gain));
+    out.r1 = vrgb_pixels_to_rgb565(vdebayer_apply_rgb_gain(pixels1, red_gain, green_gain, blue_gain));
 
     if (len >= (UINT16_VECTOR_SIZE * 2)) {
         vst2_u16(p, out);
@@ -1377,7 +1379,7 @@ void imlib_debayer_ycbcr(image_t *src, rectangle_t *roi, int8_t *Y0, int8_t *CB,
 #endif // IMLIB_ENABLE_DEBAYER_OPTIMIZATION
 
 static void vdebayer_bggr_to_grayscale_awb(image_t *src, image_t *dst, image_t *buf,
-                                           uint32_t red_gain, uint32_t blue_gain) {
+                                           uint32_t red_gain, uint32_t green_gain, uint32_t blue_gain) {
     // Load pixels, but, each set of 4 pixels overlaps the previous by 2 pixels.
     v128_t offsets = vidup_u32_unaligned(0, 2);
 
@@ -1390,11 +1392,11 @@ static void vdebayer_bggr_to_grayscale_awb(image_t *src, image_t *dst, image_t *
         v128_predicate_t pred = vdebayer_store_pred(src->w, 0);
 
         vrgb_pixels_t pixels0 = vdebayer_bggr(rows.r0, rows.r1, rows.r2);
-        vrgb_pixels_store_grayscale(p0, 0, vdebayer_apply_rb_gain(pixels0, red_gain, blue_gain), pred);
+        vrgb_pixels_store_grayscale(p0, 0, vdebayer_apply_rgb_gain(pixels0, red_gain, green_gain, blue_gain), pred);
 
         // PIXFORMAT_BAYER_BGGR shifted down by 1 becomes PIXFORMAT_BAYER_GRBG
         vrgb_pixels_t pixels1 = vdebayer_grbg(rows.r1, rows.r2, rows.r3);
-        vrgb_pixels_store_grayscale(p1, 0, vdebayer_apply_rb_gain(pixels1, red_gain, blue_gain), pred);
+        vrgb_pixels_store_grayscale(p1, 0, vdebayer_apply_rgb_gain(pixels1, red_gain, green_gain, blue_gain), pred);
 
         int32_t x = VBAYER_X_STRIDE;
         for (int32_t x_end = src->w - VBAYER_X_STRIDE; x < x_end; x += VBAYER_X_STRIDE) {
@@ -1405,11 +1407,11 @@ static void vdebayer_bggr_to_grayscale_awb(image_t *src, image_t *dst, image_t *
             rows.r3 = vldr_u32_gather_unaligned(rowptrs.p3.u8 + x, offsets);
 
             vrgb_pixels_t pixels0 = vdebayer_bggr(rows.r0, rows.r1, rows.r2);
-            vrgb_pixels_store_grayscale(p0, x, vdebayer_apply_rb_gain(pixels0, red_gain, blue_gain), pred);
+            vrgb_pixels_store_grayscale(p0, x, vdebayer_apply_rgb_gain(pixels0, red_gain, green_gain, blue_gain), pred);
 
             // PIXFORMAT_BAYER_BGGR shifted down by 1 becomes PIXFORMAT_BAYER_GRBG
             vrgb_pixels_t pixels1 = vdebayer_grbg(rows.r1, rows.r2, rows.r3);
-            vrgb_pixels_store_grayscale(p1, x, vdebayer_apply_rb_gain(pixels1, red_gain, blue_gain), pred);
+            vrgb_pixels_store_grayscale(p1, x, vdebayer_apply_rgb_gain(pixels1, red_gain, green_gain, blue_gain), pred);
         }
 
         if (x < src->w) {
@@ -1417,11 +1419,11 @@ static void vdebayer_bggr_to_grayscale_awb(image_t *src, image_t *dst, image_t *
             v128_predicate_t pred = vdebayer_store_pred(src->w, x);
 
             vrgb_pixels_t pixels0 = vdebayer_bggr(rows.r0, rows.r1, rows.r2);
-            vrgb_pixels_store_grayscale(p0, x, vdebayer_apply_rb_gain(pixels0, red_gain, blue_gain), pred);
+            vrgb_pixels_store_grayscale(p0, x, vdebayer_apply_rgb_gain(pixels0, red_gain, green_gain, blue_gain), pred);
 
             // PIXFORMAT_BAYER_BGGR shifted down by 1 becomes PIXFORMAT_BAYER_GRBG
             vrgb_pixels_t pixels1 = vdebayer_grbg(rows.r1, rows.r2, rows.r3);
-            vrgb_pixels_store_grayscale(p1, x, vdebayer_apply_rb_gain(pixels1, red_gain, blue_gain), pred);
+            vrgb_pixels_store_grayscale(p1, x, vdebayer_apply_rgb_gain(pixels1, red_gain, green_gain, blue_gain), pred);
         }
 
         vdebayer_grayscale_buf_copy(y, buf, dst);
@@ -1437,7 +1439,7 @@ static void vdebayer_bggr_to_grayscale_awb(image_t *src, image_t *dst, image_t *
         v128_predicate_t pred = vdebayer_store_pred(src->w, 0);
 
         vrgb_pixels_t pixels0 = vdebayer_bggr(rows.r0, rows.r1, rows.r2);
-        vrgb_pixels_store_grayscale(p0, 0, vdebayer_apply_rb_gain(pixels0, red_gain, blue_gain), pred);
+        vrgb_pixels_store_grayscale(p0, 0, vdebayer_apply_rgb_gain(pixels0, red_gain, green_gain, blue_gain), pred);
 
         int32_t x = VBAYER_X_STRIDE;
         for (int32_t x_end = src->w - VBAYER_X_STRIDE; x < x_end; x += VBAYER_X_STRIDE) {
@@ -1447,7 +1449,7 @@ static void vdebayer_bggr_to_grayscale_awb(image_t *src, image_t *dst, image_t *
             rows.r2 = vldr_u32_gather_unaligned(rowptrs.p2.u8 + x, offsets);
 
             vrgb_pixels_t pixels0 = vdebayer_bggr(rows.r0, rows.r1, rows.r2);
-            vrgb_pixels_store_grayscale(p0, x, vdebayer_apply_rb_gain(pixels0, red_gain, blue_gain), pred);
+            vrgb_pixels_store_grayscale(p0, x, vdebayer_apply_rgb_gain(pixels0, red_gain, green_gain, blue_gain), pred);
 
         }
 
@@ -1456,7 +1458,7 @@ static void vdebayer_bggr_to_grayscale_awb(image_t *src, image_t *dst, image_t *
             v128_predicate_t pred = vdebayer_store_pred(src->w, x);
 
             vrgb_pixels_t pixels0 = vdebayer_bggr(rows.r0, rows.r1, rows.r2);
-            vrgb_pixels_store_grayscale(p0, x, vdebayer_apply_rb_gain(pixels0, red_gain, blue_gain), pred);
+            vrgb_pixels_store_grayscale(p0, x, vdebayer_apply_rgb_gain(pixels0, red_gain, green_gain, blue_gain), pred);
 
         }
 
@@ -1465,7 +1467,7 @@ static void vdebayer_bggr_to_grayscale_awb(image_t *src, image_t *dst, image_t *
 }
 
 static void vdebayer_gbrg_to_grayscale_awb(image_t *src, image_t *dst, image_t *buf,
-                                           uint32_t red_gain, uint32_t blue_gain) {
+                                           uint32_t red_gain, uint32_t green_gain, uint32_t blue_gain) {
     // Load pixels, but, each set of 4 pixels overlaps the previous by 2 pixels.
     v128_t offsets = vidup_u32_unaligned(0, 2);
 
@@ -1478,11 +1480,11 @@ static void vdebayer_gbrg_to_grayscale_awb(image_t *src, image_t *dst, image_t *
         v128_predicate_t pred = vdebayer_store_pred(src->w, 0);
 
         vrgb_pixels_t pixels0 = vdebayer_gbrg(rows.r0, rows.r1, rows.r2);
-        vrgb_pixels_store_grayscale(p0, 0, vdebayer_apply_rb_gain(pixels0, red_gain, blue_gain), pred);
+        vrgb_pixels_store_grayscale(p0, 0, vdebayer_apply_rgb_gain(pixels0, red_gain, green_gain, blue_gain), pred);
 
         // PIXFORMAT_BAYER_GBRG shifted down by 1 becomes PIXFORMAT_BAYER_RGGB
         vrgb_pixels_t pixels1 = vdebayer_rggb(rows.r1, rows.r2, rows.r3);
-        vrgb_pixels_store_grayscale(p1, 0, vdebayer_apply_rb_gain(pixels1, red_gain, blue_gain), pred);
+        vrgb_pixels_store_grayscale(p1, 0, vdebayer_apply_rgb_gain(pixels1, red_gain, green_gain, blue_gain), pred);
 
         int32_t x = VBAYER_X_STRIDE;
         for (int32_t x_end = src->w - VBAYER_X_STRIDE; x < x_end; x += VBAYER_X_STRIDE) {
@@ -1493,11 +1495,11 @@ static void vdebayer_gbrg_to_grayscale_awb(image_t *src, image_t *dst, image_t *
             rows.r3 = vldr_u32_gather_unaligned(rowptrs.p3.u8 + x, offsets);
 
             vrgb_pixels_t pixels0 = vdebayer_gbrg(rows.r0, rows.r1, rows.r2);
-            vrgb_pixels_store_grayscale(p0, x, vdebayer_apply_rb_gain(pixels0, red_gain, blue_gain), pred);
+            vrgb_pixels_store_grayscale(p0, x, vdebayer_apply_rgb_gain(pixels0, red_gain, green_gain, blue_gain), pred);
 
             // PIXFORMAT_BAYER_GBRG shifted down by 1 becomes PIXFORMAT_BAYER_RGGB
             vrgb_pixels_t pixels1 = vdebayer_rggb(rows.r1, rows.r2, rows.r3);
-            vrgb_pixels_store_grayscale(p1, x, vdebayer_apply_rb_gain(pixels1, red_gain, blue_gain), pred);
+            vrgb_pixels_store_grayscale(p1, x, vdebayer_apply_rgb_gain(pixels1, red_gain, green_gain, blue_gain), pred);
         }
 
         if (x < src->w) {
@@ -1505,11 +1507,11 @@ static void vdebayer_gbrg_to_grayscale_awb(image_t *src, image_t *dst, image_t *
             v128_predicate_t pred = vdebayer_store_pred(src->w, x);
 
             vrgb_pixels_t pixels0 = vdebayer_gbrg(rows.r0, rows.r1, rows.r2);
-            vrgb_pixels_store_grayscale(p0, x, vdebayer_apply_rb_gain(pixels0, red_gain, blue_gain), pred);
+            vrgb_pixels_store_grayscale(p0, x, vdebayer_apply_rgb_gain(pixels0, red_gain, green_gain, blue_gain), pred);
 
             // PIXFORMAT_BAYER_GBRG shifted down by 1 becomes PIXFORMAT_BAYER_RGGB
             vrgb_pixels_t pixels1 = vdebayer_rggb(rows.r1, rows.r2, rows.r3);
-            vrgb_pixels_store_grayscale(p1, x, vdebayer_apply_rb_gain(pixels1, red_gain, blue_gain), pred);
+            vrgb_pixels_store_grayscale(p1, x, vdebayer_apply_rgb_gain(pixels1, red_gain, green_gain, blue_gain), pred);
         }
 
         vdebayer_grayscale_buf_copy(y, buf, dst);
@@ -1525,7 +1527,7 @@ static void vdebayer_gbrg_to_grayscale_awb(image_t *src, image_t *dst, image_t *
         v128_predicate_t pred = vdebayer_store_pred(src->w, 0);
 
         vrgb_pixels_t pixels0 = vdebayer_gbrg(rows.r0, rows.r1, rows.r2);
-        vrgb_pixels_store_grayscale(p0, 0, vdebayer_apply_rb_gain(pixels0, red_gain, blue_gain), pred);
+        vrgb_pixels_store_grayscale(p0, 0, vdebayer_apply_rgb_gain(pixels0, red_gain, green_gain, blue_gain), pred);
 
         int32_t x = VBAYER_X_STRIDE;
         for (int32_t x_end = src->w - VBAYER_X_STRIDE; x < x_end; x += VBAYER_X_STRIDE) {
@@ -1535,7 +1537,7 @@ static void vdebayer_gbrg_to_grayscale_awb(image_t *src, image_t *dst, image_t *
             rows.r2 = vldr_u32_gather_unaligned(rowptrs.p2.u8 + x, offsets);
 
             vrgb_pixels_t pixels0 = vdebayer_gbrg(rows.r0, rows.r1, rows.r2);
-            vrgb_pixels_store_grayscale(p0, x, vdebayer_apply_rb_gain(pixels0, red_gain, blue_gain), pred);
+            vrgb_pixels_store_grayscale(p0, x, vdebayer_apply_rgb_gain(pixels0, red_gain, green_gain, blue_gain), pred);
         }
 
         if (x < src->w) {
@@ -1543,7 +1545,7 @@ static void vdebayer_gbrg_to_grayscale_awb(image_t *src, image_t *dst, image_t *
             v128_predicate_t pred = vdebayer_store_pred(src->w, x);
 
             vrgb_pixels_t pixels0 = vdebayer_gbrg(rows.r0, rows.r1, rows.r2);
-            vrgb_pixels_store_grayscale(p0, x, vdebayer_apply_rb_gain(pixels0, red_gain, blue_gain), pred);
+            vrgb_pixels_store_grayscale(p0, x, vdebayer_apply_rgb_gain(pixels0, red_gain, green_gain, blue_gain), pred);
         }
 
         vdebayer_grayscale_buf_copy(y, buf, dst);
@@ -1551,7 +1553,7 @@ static void vdebayer_gbrg_to_grayscale_awb(image_t *src, image_t *dst, image_t *
 }
 
 static void vdebayer_grbg_to_grayscale_awb(image_t *src, image_t *dst, image_t *buf,
-                                           uint32_t red_gain, uint32_t blue_gain) {
+                                           uint32_t red_gain, uint32_t green_gain, uint32_t blue_gain) {
     // Load pixels, but, each set of 4 pixels overlaps the previous by 2 pixels.
     v128_t offsets = vidup_u32_unaligned(0, 2);
 
@@ -1564,11 +1566,11 @@ static void vdebayer_grbg_to_grayscale_awb(image_t *src, image_t *dst, image_t *
         v128_predicate_t pred = vdebayer_store_pred(src->w, 0);
 
         vrgb_pixels_t pixels0 = vdebayer_grbg(rows.r0, rows.r1, rows.r2);
-        vrgb_pixels_store_grayscale(p0, 0, vdebayer_apply_rb_gain(pixels0, red_gain, blue_gain), pred);
+        vrgb_pixels_store_grayscale(p0, 0, vdebayer_apply_rgb_gain(pixels0, red_gain, green_gain, blue_gain), pred);
 
         // PIXFORMAT_BAYER_GRBG shifted down by 1 becomes PIXFORMAT_BAYER_BGGR
         vrgb_pixels_t pixels1 = vdebayer_bggr(rows.r1, rows.r2, rows.r3);
-        vrgb_pixels_store_grayscale(p1, 0, vdebayer_apply_rb_gain(pixels1, red_gain, blue_gain), pred);
+        vrgb_pixels_store_grayscale(p1, 0, vdebayer_apply_rgb_gain(pixels1, red_gain, green_gain, blue_gain), pred);
 
         int32_t x = VBAYER_X_STRIDE;
         for (int32_t x_end = src->w - VBAYER_X_STRIDE; x < x_end; x += VBAYER_X_STRIDE) {
@@ -1579,11 +1581,11 @@ static void vdebayer_grbg_to_grayscale_awb(image_t *src, image_t *dst, image_t *
             rows.r3 = vldr_u32_gather_unaligned(rowptrs.p3.u8 + x, offsets);
 
             vrgb_pixels_t pixels0 = vdebayer_grbg(rows.r0, rows.r1, rows.r2);
-            vrgb_pixels_store_grayscale(p0, x, vdebayer_apply_rb_gain(pixels0, red_gain, blue_gain), pred);
+            vrgb_pixels_store_grayscale(p0, x, vdebayer_apply_rgb_gain(pixels0, red_gain, green_gain, blue_gain), pred);
 
             // PIXFORMAT_BAYER_GRBG shifted down by 1 becomes PIXFORMAT_BAYER_BGGR
             vrgb_pixels_t pixels1 = vdebayer_bggr(rows.r1, rows.r2, rows.r3);
-            vrgb_pixels_store_grayscale(p1, x, vdebayer_apply_rb_gain(pixels1, red_gain, blue_gain), pred);
+            vrgb_pixels_store_grayscale(p1, x, vdebayer_apply_rgb_gain(pixels1, red_gain, green_gain, blue_gain), pred);
         }
 
         if (x < src->w) {
@@ -1591,11 +1593,11 @@ static void vdebayer_grbg_to_grayscale_awb(image_t *src, image_t *dst, image_t *
             v128_predicate_t pred = vdebayer_store_pred(src->w, x);
 
             vrgb_pixels_t pixels0 = vdebayer_grbg(rows.r0, rows.r1, rows.r2);
-            vrgb_pixels_store_grayscale(p0, x, vdebayer_apply_rb_gain(pixels0, red_gain, blue_gain), pred);
+            vrgb_pixels_store_grayscale(p0, x, vdebayer_apply_rgb_gain(pixels0, red_gain, green_gain, blue_gain), pred);
 
             // PIXFORMAT_BAYER_GRBG shifted down by 1 becomes PIXFORMAT_BAYER_BGGR
             vrgb_pixels_t pixels1 = vdebayer_bggr(rows.r1, rows.r2, rows.r3);
-            vrgb_pixels_store_grayscale(p1, x, vdebayer_apply_rb_gain(pixels1, red_gain, blue_gain), pred);
+            vrgb_pixels_store_grayscale(p1, x, vdebayer_apply_rgb_gain(pixels1, red_gain, green_gain, blue_gain), pred);
         }
 
         vdebayer_grayscale_buf_copy(y, buf, dst);
@@ -1611,7 +1613,7 @@ static void vdebayer_grbg_to_grayscale_awb(image_t *src, image_t *dst, image_t *
         v128_predicate_t pred = vdebayer_store_pred(src->w, 0);
 
         vrgb_pixels_t pixels0 = vdebayer_grbg(rows.r0, rows.r1, rows.r2);
-        vrgb_pixels_store_grayscale(p0, 0, vdebayer_apply_rb_gain(pixels0, red_gain, blue_gain), pred);
+        vrgb_pixels_store_grayscale(p0, 0, vdebayer_apply_rgb_gain(pixels0, red_gain, green_gain, blue_gain), pred);
 
         int32_t x = VBAYER_X_STRIDE;
         for (int32_t x_end = src->w - VBAYER_X_STRIDE; x < x_end; x += VBAYER_X_STRIDE) {
@@ -1621,7 +1623,7 @@ static void vdebayer_grbg_to_grayscale_awb(image_t *src, image_t *dst, image_t *
             rows.r2 = vldr_u32_gather_unaligned(rowptrs.p2.u8 + x, offsets);
 
             vrgb_pixels_t pixels0 = vdebayer_grbg(rows.r0, rows.r1, rows.r2);
-            vrgb_pixels_store_grayscale(p0, x, vdebayer_apply_rb_gain(pixels0, red_gain, blue_gain), pred);
+            vrgb_pixels_store_grayscale(p0, x, vdebayer_apply_rgb_gain(pixels0, red_gain, green_gain, blue_gain), pred);
         }
 
         if (x < src->w) {
@@ -1629,7 +1631,7 @@ static void vdebayer_grbg_to_grayscale_awb(image_t *src, image_t *dst, image_t *
             v128_predicate_t pred = vdebayer_store_pred(src->w, x);
 
             vrgb_pixels_t pixels0 = vdebayer_grbg(rows.r0, rows.r1, rows.r2);
-            vrgb_pixels_store_grayscale(p0, x, vdebayer_apply_rb_gain(pixels0, red_gain, blue_gain), pred);
+            vrgb_pixels_store_grayscale(p0, x, vdebayer_apply_rgb_gain(pixels0, red_gain, green_gain, blue_gain), pred);
         }
 
         vdebayer_grayscale_buf_copy(y, buf, dst);
@@ -1637,7 +1639,7 @@ static void vdebayer_grbg_to_grayscale_awb(image_t *src, image_t *dst, image_t *
 }
 
 static void vdebayer_rggb_to_grayscale_awb(image_t *src, image_t *dst, image_t *buf,
-                                           uint32_t red_gain, uint32_t blue_gain) {
+                                           uint32_t red_gain, uint32_t green_gain, uint32_t blue_gain) {
     // Load pixels, but, each set of 4 pixels overlaps the previous by 2 pixels.
     v128_t offsets = vidup_u32_unaligned(0, 2);
 
@@ -1650,11 +1652,11 @@ static void vdebayer_rggb_to_grayscale_awb(image_t *src, image_t *dst, image_t *
         v128_predicate_t pred = vdebayer_store_pred(src->w, 0);
 
         vrgb_pixels_t pixels0 = vdebayer_rggb(rows.r0, rows.r1, rows.r2);
-        vrgb_pixels_store_grayscale(p0, 0, vdebayer_apply_rb_gain(pixels0, red_gain, blue_gain), pred);
+        vrgb_pixels_store_grayscale(p0, 0, vdebayer_apply_rgb_gain(pixels0, red_gain, green_gain, blue_gain), pred);
 
         // PIXFORMAT_BAYER_RGGB shifted down by 1 becomes PIXFORMAT_BAYER_GBRG
         vrgb_pixels_t pixels1 = vdebayer_gbrg(rows.r1, rows.r2, rows.r3);
-        vrgb_pixels_store_grayscale(p1, 0, vdebayer_apply_rb_gain(pixels1, red_gain, blue_gain), pred);
+        vrgb_pixels_store_grayscale(p1, 0, vdebayer_apply_rgb_gain(pixels1, red_gain, green_gain, blue_gain), pred);
 
         int32_t x = VBAYER_X_STRIDE;
         for (int32_t x_end = src->w - VBAYER_X_STRIDE; x < x_end; x += VBAYER_X_STRIDE) {
@@ -1665,11 +1667,11 @@ static void vdebayer_rggb_to_grayscale_awb(image_t *src, image_t *dst, image_t *
             rows.r3 = vldr_u32_gather_unaligned(rowptrs.p3.u8 + x, offsets);
 
             vrgb_pixels_t pixels0 = vdebayer_rggb(rows.r0, rows.r1, rows.r2);
-            vrgb_pixels_store_grayscale(p0, x, vdebayer_apply_rb_gain(pixels0, red_gain, blue_gain), pred);
+            vrgb_pixels_store_grayscale(p0, x, vdebayer_apply_rgb_gain(pixels0, red_gain, green_gain, blue_gain), pred);
 
             // PIXFORMAT_BAYER_RGGB shifted down by 1 becomes PIXFORMAT_BAYER_GBRG
             vrgb_pixels_t pixels1 = vdebayer_gbrg(rows.r1, rows.r2, rows.r3);
-            vrgb_pixels_store_grayscale(p1, x, vdebayer_apply_rb_gain(pixels1, red_gain, blue_gain), pred);
+            vrgb_pixels_store_grayscale(p1, x, vdebayer_apply_rgb_gain(pixels1, red_gain, green_gain, blue_gain), pred);
         }
 
         if (x < src->w) {
@@ -1677,11 +1679,11 @@ static void vdebayer_rggb_to_grayscale_awb(image_t *src, image_t *dst, image_t *
             v128_predicate_t pred = vdebayer_store_pred(src->w, x);
 
             vrgb_pixels_t pixels0 = vdebayer_rggb(rows.r0, rows.r1, rows.r2);
-            vrgb_pixels_store_grayscale(p0, x, vdebayer_apply_rb_gain(pixels0, red_gain, blue_gain), pred);
+            vrgb_pixels_store_grayscale(p0, x, vdebayer_apply_rgb_gain(pixels0, red_gain, green_gain, blue_gain), pred);
 
             // PIXFORMAT_BAYER_RGGB shifted down by 1 becomes PIXFORMAT_BAYER_GBRG
             vrgb_pixels_t pixels1 = vdebayer_gbrg(rows.r1, rows.r2, rows.r3);
-            vrgb_pixels_store_grayscale(p1, x, vdebayer_apply_rb_gain(pixels1, red_gain, blue_gain), pred);
+            vrgb_pixels_store_grayscale(p1, x, vdebayer_apply_rgb_gain(pixels1, red_gain, green_gain, blue_gain), pred);
         }
 
         vdebayer_grayscale_buf_copy(y, buf, dst);
@@ -1697,7 +1699,7 @@ static void vdebayer_rggb_to_grayscale_awb(image_t *src, image_t *dst, image_t *
         v128_predicate_t pred = vdebayer_store_pred(src->w, 0);
 
         vrgb_pixels_t pixels0 = vdebayer_rggb(rows.r0, rows.r1, rows.r2);
-        vrgb_pixels_store_grayscale(p0, 0, vdebayer_apply_rb_gain(pixels0, red_gain, blue_gain), pred);
+        vrgb_pixels_store_grayscale(p0, 0, vdebayer_apply_rgb_gain(pixels0, red_gain, green_gain, blue_gain), pred);
 
         int32_t x = VBAYER_X_STRIDE;
         for (int32_t x_end = src->w - VBAYER_X_STRIDE; x < x_end; x += VBAYER_X_STRIDE) {
@@ -1707,7 +1709,7 @@ static void vdebayer_rggb_to_grayscale_awb(image_t *src, image_t *dst, image_t *
             rows.r2 = vldr_u32_gather_unaligned(rowptrs.p2.u8 + x, offsets);
 
             vrgb_pixels_t pixels0 = vdebayer_rggb(rows.r0, rows.r1, rows.r2);
-            vrgb_pixels_store_grayscale(p0, x, vdebayer_apply_rb_gain(pixels0, red_gain, blue_gain), pred);
+            vrgb_pixels_store_grayscale(p0, x, vdebayer_apply_rgb_gain(pixels0, red_gain, green_gain, blue_gain), pred);
         }
 
         if (x < src->w) {
@@ -1715,7 +1717,7 @@ static void vdebayer_rggb_to_grayscale_awb(image_t *src, image_t *dst, image_t *
             v128_predicate_t pred = vdebayer_store_pred(src->w, x);
 
             vrgb_pixels_t pixels0 = vdebayer_rggb(rows.r0, rows.r1, rows.r2);
-            vrgb_pixels_store_grayscale(p0, x, vdebayer_apply_rb_gain(pixels0, red_gain, blue_gain), pred);
+            vrgb_pixels_store_grayscale(p0, x, vdebayer_apply_rgb_gain(pixels0, red_gain, green_gain, blue_gain), pred);
         }
 
         vdebayer_grayscale_buf_copy(y, buf, dst);
@@ -1723,7 +1725,7 @@ static void vdebayer_rggb_to_grayscale_awb(image_t *src, image_t *dst, image_t *
 }
 
 static void vdebayer_bggr_to_rgb565_awb(image_t *src, image_t *dst, image_t *buf,
-                                        uint32_t red_gain, uint32_t blue_gain) {
+                                        uint32_t red_gain, uint32_t green_gain, uint32_t blue_gain) {
     // Load pixels, but, each set of 4 pixels overlaps the previous by 2 pixels.
     v128_t offsets = vidup_u32_unaligned(0, 2);
 
@@ -1736,11 +1738,11 @@ static void vdebayer_bggr_to_rgb565_awb(image_t *src, image_t *dst, image_t *buf
         v128_predicate_t pred = vdebayer_store_pred(src->w, 0);
 
         vrgb_pixels_t pixels0 = vdebayer_bggr(rows.r0, rows.r1, rows.r2);
-        vrgb_pixels_store_rgb565(p0, 0, vdebayer_apply_rb_gain(pixels0, red_gain, blue_gain), pred);
+        vrgb_pixels_store_rgb565(p0, 0, vdebayer_apply_rgb_gain(pixels0, red_gain, green_gain, blue_gain), pred);
 
         // PIXFORMAT_BAYER_BGGR shifted down by 1 becomes PIXFORMAT_BAYER_GRBG
         vrgb_pixels_t pixels1 = vdebayer_grbg(rows.r1, rows.r2, rows.r3);
-        vrgb_pixels_store_rgb565(p1, 0, vdebayer_apply_rb_gain(pixels1, red_gain, blue_gain), pred);
+        vrgb_pixels_store_rgb565(p1, 0, vdebayer_apply_rgb_gain(pixels1, red_gain, green_gain, blue_gain), pred);
 
         int32_t x = VBAYER_X_STRIDE;
         for (int32_t x_end = src->w - VBAYER_X_STRIDE; x < x_end; x += VBAYER_X_STRIDE) {
@@ -1751,11 +1753,11 @@ static void vdebayer_bggr_to_rgb565_awb(image_t *src, image_t *dst, image_t *buf
             rows.r3 = vldr_u32_gather_unaligned(rowptrs.p3.u8 + x, offsets);
 
             vrgb_pixels_t pixels0 = vdebayer_bggr(rows.r0, rows.r1, rows.r2);
-            vstr_u16(p0 + x, vrgb_pixels_to_rgb565(vdebayer_apply_rb_gain(pixels0, red_gain, blue_gain)));
+            vstr_u16(p0 + x, vrgb_pixels_to_rgb565(vdebayer_apply_rgb_gain(pixels0, red_gain, green_gain, blue_gain)));
 
             // PIXFORMAT_BAYER_BGGR shifted down by 1 becomes PIXFORMAT_BAYER_GRBG
             vrgb_pixels_t pixels1 = vdebayer_grbg(rows.r1, rows.r2, rows.r3);
-            vstr_u16(p1 + x, vrgb_pixels_to_rgb565(vdebayer_apply_rb_gain(pixels1, red_gain, blue_gain)));
+            vstr_u16(p1 + x, vrgb_pixels_to_rgb565(vdebayer_apply_rgb_gain(pixels1, red_gain, green_gain, blue_gain)));
         }
 
         if (x < src->w) {
@@ -1763,11 +1765,11 @@ static void vdebayer_bggr_to_rgb565_awb(image_t *src, image_t *dst, image_t *buf
             v128_predicate_t pred = vdebayer_store_pred(src->w, x);
 
             vrgb_pixels_t pixels0 = vdebayer_bggr(rows.r0, rows.r1, rows.r2);
-            vrgb_pixels_store_rgb565(p0, x, vdebayer_apply_rb_gain(pixels0, red_gain, blue_gain), pred);
+            vrgb_pixels_store_rgb565(p0, x, vdebayer_apply_rgb_gain(pixels0, red_gain, green_gain, blue_gain), pred);
 
             // PIXFORMAT_BAYER_BGGR shifted down by 1 becomes PIXFORMAT_BAYER_GRBG
             vrgb_pixels_t pixels1 = vdebayer_grbg(rows.r1, rows.r2, rows.r3);
-            vrgb_pixels_store_rgb565(p1, x, vdebayer_apply_rb_gain(pixels1, red_gain, blue_gain), pred);
+            vrgb_pixels_store_rgb565(p1, x, vdebayer_apply_rgb_gain(pixels1, red_gain, green_gain, blue_gain), pred);
         }
 
         vdebayer_rgb565_buf_copy(y, buf, dst);
@@ -1783,7 +1785,7 @@ static void vdebayer_bggr_to_rgb565_awb(image_t *src, image_t *dst, image_t *buf
         v128_predicate_t pred = vdebayer_store_pred(src->w, 0);
 
         vrgb_pixels_t pixels0 = vdebayer_bggr(rows.r0, rows.r1, rows.r2);
-        vrgb_pixels_store_rgb565(p0, 0, vdebayer_apply_rb_gain(pixels0, red_gain, blue_gain), pred);
+        vrgb_pixels_store_rgb565(p0, 0, vdebayer_apply_rgb_gain(pixels0, red_gain, green_gain, blue_gain), pred);
 
         int32_t x = VBAYER_X_STRIDE;
         for (int32_t x_end = src->w - VBAYER_X_STRIDE; x < x_end; x += VBAYER_X_STRIDE) {
@@ -1793,7 +1795,7 @@ static void vdebayer_bggr_to_rgb565_awb(image_t *src, image_t *dst, image_t *buf
             rows.r2 = vldr_u32_gather_unaligned(rowptrs.p2.u8 + x, offsets);
 
             vrgb_pixels_t pixels0 = vdebayer_bggr(rows.r0, rows.r1, rows.r2);
-            vstr_u16(p0 + x, vrgb_pixels_to_rgb565(vdebayer_apply_rb_gain(pixels0, red_gain, blue_gain)));
+            vstr_u16(p0 + x, vrgb_pixels_to_rgb565(vdebayer_apply_rgb_gain(pixels0, red_gain, green_gain, blue_gain)));
         }
 
         if (x < src->w) {
@@ -1801,7 +1803,7 @@ static void vdebayer_bggr_to_rgb565_awb(image_t *src, image_t *dst, image_t *buf
             v128_predicate_t pred = vdebayer_store_pred(src->w, x);
 
             vrgb_pixels_t pixels0 = vdebayer_bggr(rows.r0, rows.r1, rows.r2);
-            vrgb_pixels_store_rgb565(p0, x, vdebayer_apply_rb_gain(pixels0, red_gain, blue_gain), pred);
+            vrgb_pixels_store_rgb565(p0, x, vdebayer_apply_rgb_gain(pixels0, red_gain, green_gain, blue_gain), pred);
         }
 
         vdebayer_rgb565_buf_copy(y, buf, dst);
@@ -1809,7 +1811,7 @@ static void vdebayer_bggr_to_rgb565_awb(image_t *src, image_t *dst, image_t *buf
 }
 
 static void vdebayer_gbrg_to_rgb565_awb(image_t *src, image_t *dst, image_t *buf,
-                                        uint32_t red_gain, uint32_t blue_gain) {
+                                        uint32_t red_gain, uint32_t green_gain, uint32_t blue_gain) {
     // Load pixels, but, each set of 4 pixels overlaps the previous by 2 pixels.
     v128_t offsets = vidup_u32_unaligned(0, 2);
 
@@ -1822,11 +1824,11 @@ static void vdebayer_gbrg_to_rgb565_awb(image_t *src, image_t *dst, image_t *buf
         v128_predicate_t pred = vdebayer_store_pred(src->w, 0);
 
         vrgb_pixels_t pixels0 = vdebayer_gbrg(rows.r0, rows.r1, rows.r2);
-        vrgb_pixels_store_rgb565(p0, 0, vdebayer_apply_rb_gain(pixels0, red_gain, blue_gain), pred);
+        vrgb_pixels_store_rgb565(p0, 0, vdebayer_apply_rgb_gain(pixels0, red_gain, green_gain, blue_gain), pred);
 
         // PIXFORMAT_BAYER_GBRG shifted down by 1 becomes PIXFORMAT_BAYER_RGGB
         vrgb_pixels_t pixels1 = vdebayer_rggb(rows.r1, rows.r2, rows.r3);
-        vrgb_pixels_store_rgb565(p1, 0, vdebayer_apply_rb_gain(pixels1, red_gain, blue_gain), pred);
+        vrgb_pixels_store_rgb565(p1, 0, vdebayer_apply_rgb_gain(pixels1, red_gain, green_gain, blue_gain), pred);
 
         int32_t x = VBAYER_X_STRIDE;
         for (int32_t x_end = src->w - VBAYER_X_STRIDE; x < x_end; x += VBAYER_X_STRIDE) {
@@ -1837,11 +1839,11 @@ static void vdebayer_gbrg_to_rgb565_awb(image_t *src, image_t *dst, image_t *buf
             rows.r3 = vldr_u32_gather_unaligned(rowptrs.p3.u8 + x, offsets);
 
             vrgb_pixels_t pixels0 = vdebayer_gbrg(rows.r0, rows.r1, rows.r2);
-            vstr_u16(p0 + x, vrgb_pixels_to_rgb565(vdebayer_apply_rb_gain(pixels0, red_gain, blue_gain)));
+            vstr_u16(p0 + x, vrgb_pixels_to_rgb565(vdebayer_apply_rgb_gain(pixels0, red_gain, green_gain, blue_gain)));
 
             // PIXFORMAT_BAYER_GBRG shifted down by 1 becomes PIXFORMAT_BAYER_RGGB
             vrgb_pixels_t pixels1 = vdebayer_rggb(rows.r1, rows.r2, rows.r3);
-            vstr_u16(p1 + x, vrgb_pixels_to_rgb565(vdebayer_apply_rb_gain(pixels1, red_gain, blue_gain)));
+            vstr_u16(p1 + x, vrgb_pixels_to_rgb565(vdebayer_apply_rgb_gain(pixels1, red_gain, green_gain, blue_gain)));
         }
 
         if (x < src->w) {
@@ -1849,11 +1851,11 @@ static void vdebayer_gbrg_to_rgb565_awb(image_t *src, image_t *dst, image_t *buf
             v128_predicate_t pred = vdebayer_store_pred(src->w, x);
 
             vrgb_pixels_t pixels0 = vdebayer_gbrg(rows.r0, rows.r1, rows.r2);
-            vrgb_pixels_store_rgb565(p0, x, vdebayer_apply_rb_gain(pixels0, red_gain, blue_gain), pred);
+            vrgb_pixels_store_rgb565(p0, x, vdebayer_apply_rgb_gain(pixels0, red_gain, green_gain, blue_gain), pred);
 
             // PIXFORMAT_BAYER_GBRG shifted down by 1 becomes PIXFORMAT_BAYER_RGGB
             vrgb_pixels_t pixels1 = vdebayer_rggb(rows.r1, rows.r2, rows.r3);
-            vrgb_pixels_store_rgb565(p1, x, vdebayer_apply_rb_gain(pixels1, red_gain, blue_gain), pred);
+            vrgb_pixels_store_rgb565(p1, x, vdebayer_apply_rgb_gain(pixels1, red_gain, green_gain, blue_gain), pred);
         }
 
         vdebayer_rgb565_buf_copy(y, buf, dst);
@@ -1869,7 +1871,7 @@ static void vdebayer_gbrg_to_rgb565_awb(image_t *src, image_t *dst, image_t *buf
         v128_predicate_t pred = vdebayer_store_pred(src->w, 0);
 
         vrgb_pixels_t pixels0 = vdebayer_gbrg(rows.r0, rows.r1, rows.r2);
-        vrgb_pixels_store_rgb565(p0, 0, vdebayer_apply_rb_gain(pixels0, red_gain, blue_gain), pred);
+        vrgb_pixels_store_rgb565(p0, 0, vdebayer_apply_rgb_gain(pixels0, red_gain, green_gain, blue_gain), pred);
 
         int32_t x = VBAYER_X_STRIDE;
         for (int32_t x_end = src->w - VBAYER_X_STRIDE; x < x_end; x += VBAYER_X_STRIDE) {
@@ -1879,7 +1881,7 @@ static void vdebayer_gbrg_to_rgb565_awb(image_t *src, image_t *dst, image_t *buf
             rows.r2 = vldr_u32_gather_unaligned(rowptrs.p2.u8 + x, offsets);
 
             vrgb_pixels_t pixels0 = vdebayer_gbrg(rows.r0, rows.r1, rows.r2);
-            vstr_u16(p0 + x, vrgb_pixels_to_rgb565(vdebayer_apply_rb_gain(pixels0, red_gain, blue_gain)));
+            vstr_u16(p0 + x, vrgb_pixels_to_rgb565(vdebayer_apply_rgb_gain(pixels0, red_gain, green_gain, blue_gain)));
         }
 
         if (x < src->w) {
@@ -1887,7 +1889,7 @@ static void vdebayer_gbrg_to_rgb565_awb(image_t *src, image_t *dst, image_t *buf
             v128_predicate_t pred = vdebayer_store_pred(src->w, x);
 
             vrgb_pixels_t pixels0 = vdebayer_gbrg(rows.r0, rows.r1, rows.r2);
-            vrgb_pixels_store_rgb565(p0, x, vdebayer_apply_rb_gain(pixels0, red_gain, blue_gain), pred);
+            vrgb_pixels_store_rgb565(p0, x, vdebayer_apply_rgb_gain(pixels0, red_gain, green_gain, blue_gain), pred);
         }
 
         vdebayer_rgb565_buf_copy(y, buf, dst);
@@ -1895,7 +1897,7 @@ static void vdebayer_gbrg_to_rgb565_awb(image_t *src, image_t *dst, image_t *buf
 }
 
 static void vdebayer_grbg_to_rgb565_awb(image_t *src, image_t *dst, image_t *buf,
-                                        uint32_t red_gain, uint32_t blue_gain) {
+                                        uint32_t red_gain, uint32_t green_gain, uint32_t blue_gain) {
     // Load pixels, but, each set of 4 pixels overlaps the previous by 2 pixels.
     v128_t offsets = vidup_u32_unaligned(0, 2);
 
@@ -1908,11 +1910,11 @@ static void vdebayer_grbg_to_rgb565_awb(image_t *src, image_t *dst, image_t *buf
         v128_predicate_t pred = vdebayer_store_pred(src->w, 0);
 
         vrgb_pixels_t pixels0 = vdebayer_grbg(rows.r0, rows.r1, rows.r2);
-        vrgb_pixels_store_rgb565(p0, 0, vdebayer_apply_rb_gain(pixels0, red_gain, blue_gain), pred);
+        vrgb_pixels_store_rgb565(p0, 0, vdebayer_apply_rgb_gain(pixels0, red_gain, green_gain, blue_gain), pred);
 
         // PIXFORMAT_BAYER_GRBG shifted down by 1 becomes PIXFORMAT_BAYER_BGGR
         vrgb_pixels_t pixels1 = vdebayer_bggr(rows.r1, rows.r2, rows.r3);
-        vrgb_pixels_store_rgb565(p1, 0, vdebayer_apply_rb_gain(pixels1, red_gain, blue_gain), pred);
+        vrgb_pixels_store_rgb565(p1, 0, vdebayer_apply_rgb_gain(pixels1, red_gain, green_gain, blue_gain), pred);
 
         int32_t x = VBAYER_X_STRIDE;
         for (int32_t x_end = src->w - VBAYER_X_STRIDE; x < x_end; x += VBAYER_X_STRIDE) {
@@ -1923,11 +1925,11 @@ static void vdebayer_grbg_to_rgb565_awb(image_t *src, image_t *dst, image_t *buf
             rows.r3 = vldr_u32_gather_unaligned(rowptrs.p3.u8 + x, offsets);
 
             vrgb_pixels_t pixels0 = vdebayer_grbg(rows.r0, rows.r1, rows.r2);
-            vstr_u16(p0 + x, vrgb_pixels_to_rgb565(vdebayer_apply_rb_gain(pixels0, red_gain, blue_gain)));
+            vstr_u16(p0 + x, vrgb_pixels_to_rgb565(vdebayer_apply_rgb_gain(pixels0, red_gain, green_gain, blue_gain)));
 
             // PIXFORMAT_BAYER_GRBG shifted down by 1 becomes PIXFORMAT_BAYER_BGGR
             vrgb_pixels_t pixels1 = vdebayer_bggr(rows.r1, rows.r2, rows.r3);
-            vstr_u16(p1 + x, vrgb_pixels_to_rgb565(vdebayer_apply_rb_gain(pixels1, red_gain, blue_gain)));
+            vstr_u16(p1 + x, vrgb_pixels_to_rgb565(vdebayer_apply_rgb_gain(pixels1, red_gain, green_gain, blue_gain)));
         }
 
         if (x < src->w) {
@@ -1935,11 +1937,11 @@ static void vdebayer_grbg_to_rgb565_awb(image_t *src, image_t *dst, image_t *buf
             v128_predicate_t pred = vdebayer_store_pred(src->w, x);
 
             vrgb_pixels_t pixels0 = vdebayer_grbg(rows.r0, rows.r1, rows.r2);
-            vrgb_pixels_store_rgb565(p0, x, vdebayer_apply_rb_gain(pixels0, red_gain, blue_gain), pred);
+            vrgb_pixels_store_rgb565(p0, x, vdebayer_apply_rgb_gain(pixels0, red_gain, green_gain, blue_gain), pred);
 
             // PIXFORMAT_BAYER_GRBG shifted down by 1 becomes PIXFORMAT_BAYER_BGGR
             vrgb_pixels_t pixels1 = vdebayer_bggr(rows.r1, rows.r2, rows.r3);
-            vrgb_pixels_store_rgb565(p1, x, vdebayer_apply_rb_gain(pixels1, red_gain, blue_gain), pred);
+            vrgb_pixels_store_rgb565(p1, x, vdebayer_apply_rgb_gain(pixels1, red_gain, green_gain, blue_gain), pred);
         }
 
         vdebayer_rgb565_buf_copy(y, buf, dst);
@@ -1955,7 +1957,7 @@ static void vdebayer_grbg_to_rgb565_awb(image_t *src, image_t *dst, image_t *buf
         v128_predicate_t pred = vdebayer_store_pred(src->w, 0);
 
         vrgb_pixels_t pixels0 = vdebayer_grbg(rows.r0, rows.r1, rows.r2);
-        vrgb_pixels_store_rgb565(p0, 0, vdebayer_apply_rb_gain(pixels0, red_gain, blue_gain), pred);
+        vrgb_pixels_store_rgb565(p0, 0, vdebayer_apply_rgb_gain(pixels0, red_gain, green_gain, blue_gain), pred);
 
         int32_t x = VBAYER_X_STRIDE;
         for (int32_t x_end = src->w - VBAYER_X_STRIDE; x < x_end; x += VBAYER_X_STRIDE) {
@@ -1965,7 +1967,7 @@ static void vdebayer_grbg_to_rgb565_awb(image_t *src, image_t *dst, image_t *buf
             rows.r2 = vldr_u32_gather_unaligned(rowptrs.p2.u8 + x, offsets);
 
             vrgb_pixels_t pixels0 = vdebayer_grbg(rows.r0, rows.r1, rows.r2);
-            vstr_u16(p0 + x, vrgb_pixels_to_rgb565(vdebayer_apply_rb_gain(pixels0, red_gain, blue_gain)));
+            vstr_u16(p0 + x, vrgb_pixels_to_rgb565(vdebayer_apply_rgb_gain(pixels0, red_gain, green_gain, blue_gain)));
         }
 
         if (x < src->w) {
@@ -1973,7 +1975,7 @@ static void vdebayer_grbg_to_rgb565_awb(image_t *src, image_t *dst, image_t *buf
             v128_predicate_t pred = vdebayer_store_pred(src->w, x);
 
             vrgb_pixels_t pixels0 = vdebayer_grbg(rows.r0, rows.r1, rows.r2);
-            vrgb_pixels_store_rgb565(p0, x, vdebayer_apply_rb_gain(pixels0, red_gain, blue_gain), pred);
+            vrgb_pixels_store_rgb565(p0, x, vdebayer_apply_rgb_gain(pixels0, red_gain, green_gain, blue_gain), pred);
         }
 
         vdebayer_rgb565_buf_copy(y, buf, dst);
@@ -1981,7 +1983,7 @@ static void vdebayer_grbg_to_rgb565_awb(image_t *src, image_t *dst, image_t *buf
 }
 
 static void vdebayer_rggb_to_rgb565_awb(image_t *src, image_t *dst, image_t *buf,
-                                        uint32_t red_gain, uint32_t blue_gain) {
+                                        uint32_t red_gain, uint32_t green_gain, uint32_t blue_gain) {
     // Load pixels, but, each set of 4 pixels overlaps the previous by 2 pixels.
     v128_t offsets = vidup_u32_unaligned(0, 2);
 
@@ -1994,11 +1996,11 @@ static void vdebayer_rggb_to_rgb565_awb(image_t *src, image_t *dst, image_t *buf
         v128_predicate_t pred = vdebayer_store_pred(src->w, 0);
 
         vrgb_pixels_t pixels0 = vdebayer_rggb(rows.r0, rows.r1, rows.r2);
-        vrgb_pixels_store_rgb565(p0, 0, vdebayer_apply_rb_gain(pixels0, red_gain, blue_gain), pred);
+        vrgb_pixels_store_rgb565(p0, 0, vdebayer_apply_rgb_gain(pixels0, red_gain, green_gain, blue_gain), pred);
 
         // PIXFORMAT_BAYER_RGGB shifted down by 1 becomes PIXFORMAT_BAYER_GBRG
         vrgb_pixels_t pixels1 = vdebayer_gbrg(rows.r1, rows.r2, rows.r3);
-        vrgb_pixels_store_rgb565(p1, 0, vdebayer_apply_rb_gain(pixels1, red_gain, blue_gain), pred);
+        vrgb_pixels_store_rgb565(p1, 0, vdebayer_apply_rgb_gain(pixels1, red_gain, green_gain, blue_gain), pred);
 
         int32_t x = VBAYER_X_STRIDE;
         for (int32_t x_end = src->w - VBAYER_X_STRIDE; x < x_end; x += VBAYER_X_STRIDE) {
@@ -2009,11 +2011,11 @@ static void vdebayer_rggb_to_rgb565_awb(image_t *src, image_t *dst, image_t *buf
             rows.r3 = vldr_u32_gather_unaligned(rowptrs.p3.u8 + x, offsets);
 
             vrgb_pixels_t pixels0 = vdebayer_rggb(rows.r0, rows.r1, rows.r2);
-            vstr_u16(p0 + x, vrgb_pixels_to_rgb565(vdebayer_apply_rb_gain(pixels0, red_gain, blue_gain)));
+            vstr_u16(p0 + x, vrgb_pixels_to_rgb565(vdebayer_apply_rgb_gain(pixels0, red_gain, green_gain, blue_gain)));
 
             // PIXFORMAT_BAYER_RGGB shifted down by 1 becomes PIXFORMAT_BAYER_GBRG
             vrgb_pixels_t pixels1 = vdebayer_gbrg(rows.r1, rows.r2, rows.r3);
-            vstr_u16(p1 + x, vrgb_pixels_to_rgb565(vdebayer_apply_rb_gain(pixels1, red_gain, blue_gain)));
+            vstr_u16(p1 + x, vrgb_pixels_to_rgb565(vdebayer_apply_rgb_gain(pixels1, red_gain, green_gain, blue_gain)));
         }
 
         if (x < src->w) {
@@ -2021,11 +2023,11 @@ static void vdebayer_rggb_to_rgb565_awb(image_t *src, image_t *dst, image_t *buf
             v128_predicate_t pred = vdebayer_store_pred(src->w, x);
 
             vrgb_pixels_t pixels0 = vdebayer_rggb(rows.r0, rows.r1, rows.r2);
-            vrgb_pixels_store_rgb565(p0, x, vdebayer_apply_rb_gain(pixels0, red_gain, blue_gain), pred);
+            vrgb_pixels_store_rgb565(p0, x, vdebayer_apply_rgb_gain(pixels0, red_gain, green_gain, blue_gain), pred);
 
             // PIXFORMAT_BAYER_RGGB shifted down by 1 becomes PIXFORMAT_BAYER_GBRG
             vrgb_pixels_t pixels1 = vdebayer_gbrg(rows.r1, rows.r2, rows.r3);
-            vrgb_pixels_store_rgb565(p1, x, vdebayer_apply_rb_gain(pixels1, red_gain, blue_gain), pred);
+            vrgb_pixels_store_rgb565(p1, x, vdebayer_apply_rgb_gain(pixels1, red_gain, green_gain, blue_gain), pred);
         }
 
         vdebayer_rgb565_buf_copy(y, buf, dst);
@@ -2041,7 +2043,7 @@ static void vdebayer_rggb_to_rgb565_awb(image_t *src, image_t *dst, image_t *buf
         v128_predicate_t pred = vdebayer_store_pred(src->w, 0);
 
         vrgb_pixels_t pixels0 = vdebayer_rggb(rows.r0, rows.r1, rows.r2);
-        vrgb_pixels_store_rgb565(p0, 0, vdebayer_apply_rb_gain(pixels0, red_gain, blue_gain), pred);
+        vrgb_pixels_store_rgb565(p0, 0, vdebayer_apply_rgb_gain(pixels0, red_gain, green_gain, blue_gain), pred);
 
         int32_t x = VBAYER_X_STRIDE;
         for (int32_t x_end = src->w - VBAYER_X_STRIDE; x < x_end; x += VBAYER_X_STRIDE) {
@@ -2051,7 +2053,7 @@ static void vdebayer_rggb_to_rgb565_awb(image_t *src, image_t *dst, image_t *buf
             rows.r2 = vldr_u32_gather_unaligned(rowptrs.p2.u8 + x, offsets);
 
             vrgb_pixels_t pixels0 = vdebayer_rggb(rows.r0, rows.r1, rows.r2);
-            vstr_u16(p0 + x, vrgb_pixels_to_rgb565(vdebayer_apply_rb_gain(pixels0, red_gain, blue_gain)));
+            vstr_u16(p0 + x, vrgb_pixels_to_rgb565(vdebayer_apply_rgb_gain(pixels0, red_gain, green_gain, blue_gain)));
         }
 
         if (x < src->w) {
@@ -2059,14 +2061,15 @@ static void vdebayer_rggb_to_rgb565_awb(image_t *src, image_t *dst, image_t *buf
             v128_predicate_t pred = vdebayer_store_pred(src->w, x);
 
             vrgb_pixels_t pixels0 = vdebayer_rggb(rows.r0, rows.r1, rows.r2);
-            vrgb_pixels_store_rgb565(p0, x, vdebayer_apply_rb_gain(pixels0, red_gain, blue_gain), pred);
+            vrgb_pixels_store_rgb565(p0, x, vdebayer_apply_rgb_gain(pixels0, red_gain, green_gain, blue_gain), pred);
         }
 
         vdebayer_rgb565_buf_copy(y, buf, dst);
     }
 }
 
-static void vdebayer_bggr_to_grayscale_awb_quarter(image_t *src, image_t *dst, uint32_t red_gain, uint32_t blue_gain) {
+static void vdebayer_bggr_to_grayscale_awb_quarter(image_t *src, image_t *dst,
+                                                   uint32_t red_gain, uint32_t green_gain, uint32_t blue_gain) {
     for (int32_t y = 0; y < src->h; y += VBAYER_Y_STRIDE) {
         v2x_row_ptrs_t rowptrs = vdebayer_quarter_rowptrs_init(src, y);
         uint8_t *p = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(dst, (y / 2));
@@ -2089,12 +2092,13 @@ static void vdebayer_bggr_to_grayscale_awb_quarter(image_t *src, image_t *dst, u
                 .b = bg.r0
             };
 
-            vdebayer_store_packed_grayscale(p + (x / 2), packed, red_gain, blue_gain, dst->w - (x / 2));
+            vdebayer_store_packed_grayscale(p + (x / 2), packed, red_gain, green_gain, blue_gain, dst->w - (x / 2));
         }
     }
 }
 
-static void vdebayer_gbrg_to_grayscale_awb_quarter(image_t *src, image_t *dst, uint32_t red_gain, uint32_t blue_gain) {
+static void vdebayer_gbrg_to_grayscale_awb_quarter(image_t *src, image_t *dst,
+                                                   uint32_t red_gain, uint32_t green_gain, uint32_t blue_gain) {
     for (int32_t y = 0; y < src->h; y += VBAYER_Y_STRIDE) {
         v2x_row_ptrs_t rowptrs = vdebayer_quarter_rowptrs_init(src, y);
         uint8_t *p = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(dst, (y / 2));
@@ -2117,12 +2121,13 @@ static void vdebayer_gbrg_to_grayscale_awb_quarter(image_t *src, image_t *dst, u
                 .b = gb.r1
             };
 
-            vdebayer_store_packed_grayscale(p + (x / 2), packed, red_gain, blue_gain, dst->w - (x / 2));
+            vdebayer_store_packed_grayscale(p + (x / 2), packed, red_gain, green_gain, blue_gain, dst->w - (x / 2));
         }
     }
 }
 
-static void vdebayer_grbg_to_grayscale_awb_quarter(image_t *src, image_t *dst, uint32_t red_gain, uint32_t blue_gain) {
+static void vdebayer_grbg_to_grayscale_awb_quarter(image_t *src, image_t *dst,
+                                                   uint32_t red_gain, uint32_t green_gain, uint32_t blue_gain) {
     for (int32_t y = 0; y < src->h; y += VBAYER_Y_STRIDE) {
         v2x_row_ptrs_t rowptrs = vdebayer_quarter_rowptrs_init(src, y);
         uint8_t *p = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(dst, (y / 2));
@@ -2145,12 +2150,13 @@ static void vdebayer_grbg_to_grayscale_awb_quarter(image_t *src, image_t *dst, u
                 .b = bg.r0
             };
 
-            vdebayer_store_packed_grayscale(p + (x / 2), packed, red_gain, blue_gain, dst->w - (x / 2));
+            vdebayer_store_packed_grayscale(p + (x / 2), packed, red_gain, green_gain, blue_gain, dst->w - (x / 2));
         }
     }
 }
 
-static void vdebayer_rggb_to_grayscale_awb_quarter(image_t *src, image_t *dst, uint32_t red_gain, uint32_t blue_gain) {
+static void vdebayer_rggb_to_grayscale_awb_quarter(image_t *src, image_t *dst,
+                                                   uint32_t red_gain, uint32_t green_gain, uint32_t blue_gain) {
     for (int32_t y = 0; y < src->h; y += VBAYER_Y_STRIDE) {
         v2x_row_ptrs_t rowptrs = vdebayer_quarter_rowptrs_init(src, y);
         uint8_t *p = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(dst, (y / 2));
@@ -2173,12 +2179,13 @@ static void vdebayer_rggb_to_grayscale_awb_quarter(image_t *src, image_t *dst, u
                 .b = gb.r1
             };
 
-            vdebayer_store_packed_grayscale(p + (x / 2), packed, red_gain, blue_gain, dst->w - (x / 2));
+            vdebayer_store_packed_grayscale(p + (x / 2), packed, red_gain, green_gain, blue_gain, dst->w - (x / 2));
         }
     }
 }
 
-static void vdebayer_bggr_to_rgb565_awb_quarter(image_t *src, image_t *dst, uint32_t red_gain, uint32_t blue_gain) {
+static void vdebayer_bggr_to_rgb565_awb_quarter(image_t *src, image_t *dst,
+                                                uint32_t red_gain, uint32_t green_gain, uint32_t blue_gain) {
     for (int32_t y = 0; y < src->h; y += VBAYER_Y_STRIDE) {
         v2x_row_ptrs_t rowptrs = vdebayer_quarter_rowptrs_init(src, y);
         uint16_t *p = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(dst, (y / 2));
@@ -2201,12 +2208,13 @@ static void vdebayer_bggr_to_rgb565_awb_quarter(image_t *src, image_t *dst, uint
                 .b = bg.r0
             };
 
-            vdebayer_store_packed_rgb565(p + (x / 2), packed, red_gain, blue_gain, dst->w - (x / 2));
+            vdebayer_store_packed_rgb565(p + (x / 2), packed, red_gain, green_gain, blue_gain, dst->w - (x / 2));
         }
     }
 }
 
-static void vdebayer_gbrg_to_rgb565_awb_quarter(image_t *src, image_t *dst, uint32_t red_gain, uint32_t blue_gain) {
+static void vdebayer_gbrg_to_rgb565_awb_quarter(image_t *src, image_t *dst,
+                                                uint32_t red_gain, uint32_t green_gain, uint32_t blue_gain) {
     for (int32_t y = 0; y < src->h; y += VBAYER_Y_STRIDE) {
         v2x_row_ptrs_t rowptrs = vdebayer_quarter_rowptrs_init(src, y);
         uint16_t *p = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(dst, (y / 2));
@@ -2229,12 +2237,13 @@ static void vdebayer_gbrg_to_rgb565_awb_quarter(image_t *src, image_t *dst, uint
                 .b = gb.r1
             };
 
-            vdebayer_store_packed_rgb565(p + (x / 2), packed, red_gain, blue_gain, dst->w - (x / 2));
+            vdebayer_store_packed_rgb565(p + (x / 2), packed, red_gain, green_gain, blue_gain, dst->w - (x / 2));
         }
     }
 }
 
-static void vdebayer_grbg_to_rgb565_awb_quarter(image_t *src, image_t *dst, uint32_t red_gain, uint32_t blue_gain) {
+static void vdebayer_grbg_to_rgb565_awb_quarter(image_t *src, image_t *dst,
+                                                uint32_t red_gain, uint32_t green_gain, uint32_t blue_gain) {
     for (int32_t y = 0; y < src->h; y += VBAYER_Y_STRIDE) {
         v2x_row_ptrs_t rowptrs = vdebayer_quarter_rowptrs_init(src, y);
         uint16_t *p = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(dst, (y / 2));
@@ -2257,12 +2266,13 @@ static void vdebayer_grbg_to_rgb565_awb_quarter(image_t *src, image_t *dst, uint
                 .b = bg.r0
             };
 
-            vdebayer_store_packed_rgb565(p + (x / 2), packed, red_gain, blue_gain, dst->w - (x / 2));
+            vdebayer_store_packed_rgb565(p + (x / 2), packed, red_gain, green_gain, blue_gain, dst->w - (x / 2));
         }
     }
 }
 
-static void vdebayer_rggb_to_rgb565_awb_quarter(image_t *src, image_t *dst, uint32_t red_gain, uint32_t blue_gain) {
+static void vdebayer_rggb_to_rgb565_awb_quarter(image_t *src, image_t *dst,
+                                                uint32_t red_gain, uint32_t green_gain, uint32_t blue_gain) {
     for (int32_t y = 0; y < src->h; y += VBAYER_Y_STRIDE) {
         v2x_row_ptrs_t rowptrs = vdebayer_quarter_rowptrs_init(src, y);
         uint16_t *p = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(dst, (y / 2));
@@ -2285,7 +2295,7 @@ static void vdebayer_rggb_to_rgb565_awb_quarter(image_t *src, image_t *dst, uint
                 .b = gb.r1
             };
 
-            vdebayer_store_packed_rgb565(p + (x / 2), packed, red_gain, blue_gain, dst->w - (x / 2));
+            vdebayer_store_packed_rgb565(p + (x / 2), packed, red_gain, green_gain, blue_gain, dst->w - (x / 2));
         }
     }
 }
@@ -2297,23 +2307,22 @@ static void vdebayer_rggb_to_rgb565_awb_quarter(image_t *src, image_t *dst, uint
 // GRAYSCALE: src->data == dst->data
 // RGB565: src->data == dst->data + image_size(src)
 // YUV422: Not supported
-void imlib_debayer_image_awb(image_t *dst, image_t *src, bool fast, uint32_t r_out, uint32_t g_out, uint32_t b_out) {
-    uint32_t red_gain = IM_DIV(g_out * 32, r_out);
-    red_gain = IM_MIN(red_gain, 128U);
-
-    uint32_t blue_gain = IM_DIV(g_out * 32, b_out);
-    blue_gain = IM_MIN(blue_gain, 128U);
+void imlib_debayer_image_awb(image_t *dst, image_t *src, bool fast, float r_gain, float g_gain, float b_gain) {
+    // The gains are applied in Q5 and are limited to 4x.
+    uint32_t red_gain = IM_CLAMP(fast_roundf(r_gain * 32.0f), 0, 128);
+    uint32_t green_gain = IM_CLAMP(fast_roundf(g_gain * 32.0f), 0, 128);
+    uint32_t blue_gain = IM_CLAMP(fast_roundf(b_gain * 32.0f), 0, 128);
 
     if (fast) {
         switch (src->pixfmt) {
             case PIXFORMAT_BAYER_BGGR: {
                 switch (dst->pixfmt) {
                     case PIXFORMAT_GRAYSCALE: {
-                        vdebayer_bggr_to_grayscale_awb_quarter(src, dst, red_gain, blue_gain);
+                        vdebayer_bggr_to_grayscale_awb_quarter(src, dst, red_gain, green_gain, blue_gain);
                         break;
                     }
                     case PIXFORMAT_RGB565: {
-                        vdebayer_bggr_to_rgb565_awb_quarter(src, dst, red_gain, blue_gain);
+                        vdebayer_bggr_to_rgb565_awb_quarter(src, dst, red_gain, green_gain, blue_gain);
                         break;
                     }
                     default: {
@@ -2325,11 +2334,11 @@ void imlib_debayer_image_awb(image_t *dst, image_t *src, bool fast, uint32_t r_o
             case PIXFORMAT_BAYER_GBRG: {
                 switch (dst->pixfmt) {
                     case PIXFORMAT_GRAYSCALE: {
-                        vdebayer_gbrg_to_grayscale_awb_quarter(src, dst, red_gain, blue_gain);
+                        vdebayer_gbrg_to_grayscale_awb_quarter(src, dst, red_gain, green_gain, blue_gain);
                         break;
                     }
                     case PIXFORMAT_RGB565: {
-                        vdebayer_gbrg_to_rgb565_awb_quarter(src, dst, red_gain, blue_gain);
+                        vdebayer_gbrg_to_rgb565_awb_quarter(src, dst, red_gain, green_gain, blue_gain);
                         break;
                     }
                     default: {
@@ -2341,11 +2350,11 @@ void imlib_debayer_image_awb(image_t *dst, image_t *src, bool fast, uint32_t r_o
             case PIXFORMAT_BAYER_GRBG: {
                 switch (dst->pixfmt) {
                     case PIXFORMAT_GRAYSCALE: {
-                        vdebayer_grbg_to_grayscale_awb_quarter(src, dst, red_gain, blue_gain);
+                        vdebayer_grbg_to_grayscale_awb_quarter(src, dst, red_gain, green_gain, blue_gain);
                         break;
                     }
                     case PIXFORMAT_RGB565: {
-                        vdebayer_grbg_to_rgb565_awb_quarter(src, dst, red_gain, blue_gain);
+                        vdebayer_grbg_to_rgb565_awb_quarter(src, dst, red_gain, green_gain, blue_gain);
                         break;
                     }
                     default: {
@@ -2357,11 +2366,11 @@ void imlib_debayer_image_awb(image_t *dst, image_t *src, bool fast, uint32_t r_o
             case PIXFORMAT_BAYER_RGGB: {
                 switch (dst->pixfmt) {
                     case PIXFORMAT_GRAYSCALE: {
-                        vdebayer_rggb_to_grayscale_awb_quarter(src, dst, red_gain, blue_gain);
+                        vdebayer_rggb_to_grayscale_awb_quarter(src, dst, red_gain, green_gain, blue_gain);
                         break;
                     }
                     case PIXFORMAT_RGB565: {
-                        vdebayer_rggb_to_rgb565_awb_quarter(src, dst, red_gain, blue_gain);
+                        vdebayer_rggb_to_rgb565_awb_quarter(src, dst, red_gain, green_gain, blue_gain);
                         break;
                     }
                     default: {
@@ -2386,19 +2395,19 @@ void imlib_debayer_image_awb(image_t *dst, image_t *src, bool fast, uint32_t r_o
 
                 switch (src->pixfmt) {
                     case PIXFORMAT_BAYER_BGGR: {
-                        vdebayer_bggr_to_grayscale_awb(src, dst, &buf, red_gain, blue_gain);
+                        vdebayer_bggr_to_grayscale_awb(src, dst, &buf, red_gain, green_gain, blue_gain);
                         break;
                     }
                     case PIXFORMAT_BAYER_GBRG: {
-                        vdebayer_gbrg_to_grayscale_awb(src, dst, &buf, red_gain, blue_gain);
+                        vdebayer_gbrg_to_grayscale_awb(src, dst, &buf, red_gain, green_gain, blue_gain);
                         break;
                     }
                     case PIXFORMAT_BAYER_GRBG: {
-                        vdebayer_grbg_to_grayscale_awb(src, dst, &buf, red_gain, blue_gain);
+                        vdebayer_grbg_to_grayscale_awb(src, dst, &buf, red_gain, green_gain, blue_gain);
                         break;
                     }
                     case PIXFORMAT_BAYER_RGGB: {
-                        vdebayer_rggb_to_grayscale_awb(src, dst, &buf, red_gain, blue_gain);
+                        vdebayer_rggb_to_grayscale_awb(src, dst, &buf, red_gain, green_gain, blue_gain);
                         break;
                     }
                     default: {
@@ -2426,19 +2435,19 @@ void imlib_debayer_image_awb(image_t *dst, image_t *src, bool fast, uint32_t r_o
 
                 switch (src->pixfmt) {
                     case PIXFORMAT_BAYER_BGGR: {
-                        vdebayer_bggr_to_rgb565_awb(src, dst, &buf, red_gain, blue_gain);
+                        vdebayer_bggr_to_rgb565_awb(src, dst, &buf, red_gain, green_gain, blue_gain);
                         break;
                     }
                     case PIXFORMAT_BAYER_GBRG: {
-                        vdebayer_gbrg_to_rgb565_awb(src, dst, &buf, red_gain, blue_gain);
+                        vdebayer_gbrg_to_rgb565_awb(src, dst, &buf, red_gain, green_gain, blue_gain);
                         break;
                     }
                     case PIXFORMAT_BAYER_GRBG: {
-                        vdebayer_grbg_to_rgb565_awb(src, dst, &buf, red_gain, blue_gain);
+                        vdebayer_grbg_to_rgb565_awb(src, dst, &buf, red_gain, green_gain, blue_gain);
                         break;
                     }
                     case PIXFORMAT_BAYER_RGGB: {
-                        vdebayer_rggb_to_rgb565_awb(src, dst, &buf, red_gain, blue_gain);
+                        vdebayer_rggb_to_rgb565_awb(src, dst, &buf, red_gain, green_gain, blue_gain);
                         break;
                     }
                     default: {
