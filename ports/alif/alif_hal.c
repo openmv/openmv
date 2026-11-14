@@ -398,13 +398,13 @@ int alif_hal_csi_init(CPI_Type *cpi) {
 
 void alif_hal_mpu_init(void) {
     static const ARM_MPU_Region_t MPU_CONFIG_TABLE[] __STARTUP_RO_DATA_ATTRIBUTE = {
-        [MPU_REGION_SRAM0] = {   /* SRAM0 - 4MB : RO-0, NP-1, XN-0 */
-            .RBAR = ARM_MPU_RBAR(0x02000000, ARM_MPU_SH_NON, 0, 1, 0),
-            .RLAR = ARM_MPU_RLAR(0x023FFFFF, MPU_ATTR_NORMAL_WB_RA_WA)
+        [MPU_REGION_SRAM0] = {   /* SRAM0 : RO-0, NP-1, XN-0 */
+            .RBAR = ARM_MPU_RBAR(OMV_SRAM0_ORIGIN, ARM_MPU_SH_NON, 0, 1, 0),
+            .RLAR = ARM_MPU_RLAR(OMV_SRAM0_ORIGIN + OMV_SRAM0_LENGTH - 1, MPU_ATTR_NORMAL_WB_RA_WA)
         },
-        [MPU_REGION_SRAM1] = {   /* SRAM1 - 2.5MB : RO-0, NP-1, XN-0 */
-            .RBAR = ARM_MPU_RBAR(0x08000000, ARM_MPU_SH_NON, 0, 1, 0),
-            .RLAR = ARM_MPU_RLAR(0x0827FFFF, MPU_ATTR_NORMAL_WB_RA_WA)
+        [MPU_REGION_SRAM1] = {   /* SRAM1 : RO-0, NP-1, XN-0 */
+            .RBAR = ARM_MPU_RBAR(OMV_SRAM1_ORIGIN, ARM_MPU_SH_NON, 0, 1, 0),
+            .RLAR = ARM_MPU_RLAR(OMV_SRAM1_ORIGIN + OMV_SRAM1_LENGTH - 1, MPU_ATTR_NORMAL_WB_RA_WA)
         },
         [MPU_REGION_HOST_PERIPHERALS] = {   /* Host Peripherals - 16MB : RO-0, NP-1, XN-1 */
             .RBAR = ARM_MPU_RBAR(0x1A000000, ARM_MPU_SH_NON, 0, 1, 1),
