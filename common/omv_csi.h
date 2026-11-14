@@ -670,6 +670,10 @@ int omv_csi_stats_get_rgb_gain_db(omv_csi_t *csi, float *r_gain_db, float *g_gai
 // Returns false if most pixels are clipped, where the estimate isn't reliable.
 bool omv_csi_stats_unclip(const float mean[3], const float clipped[3], float out[3]);
 
+// Moves the R/G/B averages onto the polyline of the table's calibration illuminants, keeping green.
+// Returns false without a table of at least two illuminants.
+bool omv_csi_ccm_project(const omv_csi_ccm_table_t *table, float rgb[3]);
+
 // Blends the table's matrices for the R/G/B averages and fades to unity at extreme luminance.
 bool omv_csi_ccm_compute(const omv_csi_ccm_table_t *table, const float rgb[3], float luminance, omv_csi_ccm_t *out);
 
