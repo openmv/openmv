@@ -48,6 +48,12 @@ endif
 SERIAL_PORT ?= /dev/ttyUSB0
 ALIF_TOOLS = $(TOOLS_DIR)/alif/toolkit
 ALIF_TOC_CONFIG = $(OMV_BOARD_CONFIG_DIR)/alif_cfg.json
+ALIF_TOOLKIT_ARGS = --cfg-part $(ALIF_TOOLKIT_CFG_PART) --cfg-rev $(ALIF_TOOLKIT_CFG_REV)
+
+# Use the board's device config if provided.
+ifneq ($(wildcard $(OMV_BOARD_CONFIG_DIR)/app-device-config.json),)
+ALIF_TOC_ARGS = --cfg-binary $(abspath $(OMV_BOARD_CONFIG_DIR)/app-device-config.json)
+endif
 
 $(FW_DIR):
 	$(MKDIR) -p $@
@@ -66,6 +72,8 @@ $(FW_DIR)/firmware.toc: $(ALIF_TOC_APPS)
         --filename $(abspath $(ALIF_TOC_CONFIG)) \
         --output-dir $(BUILD) \
         --firmware-dir $(FW_DIR) \
+        $(ALIF_TOOLKIT_ARGS) \
+        $(ALIF_TOC_ARGS) \
         --output $@
 
 $(FW_DIR)/firmware_pad.toc: $(FW_DIR)/firmware.toc
@@ -78,5 +86,6 @@ deploy: $(FW_DIR)/firmware.toc
 	$(ECHO) "Writing $< to the board"
 	$(ALIF_TOOLS)/app-write-mram.py \
         --port $(SERIAL_PORT) \
+        $(ALIF_TOOLKIT_ARGS) \
         --pad \
         --images file:$(BUILD)/application_package.ds
