@@ -1509,6 +1509,11 @@ __weak int omv_csi_set_framebuffers(omv_csi_t *csi, size_t count) {
     size_t frame_size = csi->resolution[csi->framesize][0] * csi->resolution[csi->framesize][1] * 2;
     #endif
 
+    // The sensor's frames are captured into the buffers and rendered in place.
+    if (csi->get_frame_size) {
+        frame_size = IM_MAX(frame_size, csi->get_frame_size(csi));
+    }
+
     if (count == -1) {
         for (size_t i = 3; i > 0; i--) {
             if (!framebuffer_resize(csi->fb, i, frame_size)) {

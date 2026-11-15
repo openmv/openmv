@@ -531,6 +531,8 @@ typedef struct _omv_csi {
     int (*abort) (omv_csi_t *csi, bool fifo_flush, bool in_irq);
     int (*snapshot) (omv_csi_t *csi, image_t *image, uint32_t flags);
     int (*post_process) (omv_csi_t *csi, image_t *image, uint32_t flags);
+    // Returns the size of the sensor's frames, for frames larger than the image.
+    size_t (*get_frame_size) (omv_csi_t *csi);
     int (*isp_reset) (omv_csi_t *csi);
 } omv_csi_t;
 
