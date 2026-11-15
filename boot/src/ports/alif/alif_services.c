@@ -85,7 +85,7 @@ void alif_services_init(void) {
         .packet_buffer_address = (uint32_t) se_buffer,
         .fn_send_mhu_message = mhu_driver_out.send_message,
         .fn_wait_ms = NULL, // not currently used by services_host_handler.c
-        .wait_timeout = 1000000,
+        .wait_timeout = 0x04000000,
         .fn_print_msg = dummy_printf,
     };
     SERVICES_initialize(&services_init_params);

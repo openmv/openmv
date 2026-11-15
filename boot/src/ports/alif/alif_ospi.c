@@ -41,6 +41,7 @@
 #include "gpio.h"
 #include "pinconf.h"
 #include "sys_clocks.h"
+#include "sys_ctrl_ospi.h"
 #include "ospi_private.h"
 
 #define OSPI_INST_0BIT      (0x00U)
@@ -118,10 +119,13 @@ static void ospi_setup(ospi_flash_t *ospi, uint32_t addr_len, uint32_t ndf, uint
     ospi_writel(ospi, ctrlr0, val);
     ospi_writel(ospi, ctrlr1, (ndf ? (ndf - 1) : 0));
 
+    // The command and address are pushed as 8-bit data frames, so the
+    // instruction and address lengths must be 0. Some parts (e.g. E4)
+    // apply them in standard SPI mode too.
     val = TRANS_TYPE_FRF_DEFINED
           | (1 << CTRLR0_SPI_RXDS_EN_OFFSET)
-          | (addr_len << CTRLR0_ADDR_L_OFFSET)
-          | (OSPI_INST_8BIT << CTRLR0_INST_L_OFFSET)
+          | (OSPI_ADDR_0BIT << CTRLR0_ADDR_L_OFFSET)
+          | (OSPI_INST_0BIT << CTRLR0_INST_L_OFFSET)
           | (wait_cycles << CTRLR0_WAIT_CYCLES_OFFSET);
 
     ospi_writel(ospi, spi_ctrlr0, val);
@@ -279,6 +283,10 @@ static int ospi_flash_init(ospi_flash_t *ospi) {
     ospi->aes_regs = (aes_regs_t *) OMV_BOOT_OSPI_AES_BASE;
     ospi->xip_base = (volatile void *) OMV_BOOT_OSPI_XIP_BASE;
 
+    #if SOC_FEAT_OSPI_HAS_CLK_ENABLE
+    enable_ospi_clk(OMV_BOOT_OSPI_SSI_BASE == OSPI1_BASE ? OSPI_INSTANCE_1 : OSPI_INSTANCE_0);
+    #endif
+
     // Initialize OSPI.
     spi_disable(ospi);
     ospi_writel(ospi, ser, 0);
@@ -292,6 +300,10 @@ static int ospi_flash_init(ospi_flash_t *ospi) {
     // Detect onboard flash based on ID.
     uint8_t id[3] = { 0 };
     ospi_recv(ospi, OSPI_RDID_COMMAND, OSPI_ADDR_0BIT, 0, 3, id, OSPI_RDID_DCYCLES);
+
+    // The MX25UM51345G outputs byte-mode DOPI data, which the firmware reads
+    // back as swapped 16-bit words, so the data is stored pre-swapped.
+    ospi->bswap16 = (id[0] == 0xC2 && id[1] == 0x81 && id[2] == 0x3A);
     ospi->initialized = true;
     return 0;
 }
@@ -336,6 +348,8 @@ int spi_flash_read(uint32_t addr, uint8_t *buf, uint32_t size) {
         return -1;
     }
 
+    uint16_t *buf16 = (uint16_t *) buf;
+
     for (size_t i = 0; i < size / OSPI_FIFO_SIZE; i++) {
         if (ospi_flash_read_page(&ospi, addr, buf, OSPI_FIFO_SIZE) != 0) {
             return -1;
@@ -345,7 +359,15 @@ int spi_flash_read(uint32_t addr, uint8_t *buf, uint32_t size) {
     }
 
     if ((size % OSPI_FIFO_SIZE)) {
-        return ospi_flash_read_page(&ospi, addr, buf, (size % OSPI_FIFO_SIZE));
+        if (ospi_flash_read_page(&ospi, addr, buf, (size % OSPI_FIFO_SIZE)) != 0) {
+            return -1;
+        }
+    }
+
+    if (ospi.bswap16) {
+        for (size_t i = 0; i < size / 2; i++) {
+            buf16[i] = __REV16(buf16[i]);
+        }
     }
     return 0;
 }

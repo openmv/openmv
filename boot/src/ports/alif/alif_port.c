@@ -139,6 +139,14 @@ void port_delay_ms(uint32_t ms) {
 }
 
 void port_pin_mode(uint32_t pin, uint32_t mode) {
+    #if SOC_FEAT_GPIO_HAS_CLOCK_ENABLE
+    // Enable the GPIO port clock. LPGPIO (port 15) has no clock gate.
+    uint8_t port = omv_boot_pins[pin].port;
+    if (port < sizeof(CLKCTL_PER_SLV->GPIO_CTRL) / sizeof(CLKCTL_PER_SLV->GPIO_CTRL[0])) {
+        CLKCTL_PER_SLV->GPIO_CTRL[port] |= (1U << 16);
+    }
+    #endif
+
     if (mode == PIN_MODE_OUTPUT) {
         gpio_set_direction_output(omv_boot_pins[pin].gpio, omv_boot_pins[pin].pin);
     } else {
