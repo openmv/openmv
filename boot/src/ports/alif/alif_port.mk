@@ -33,7 +33,10 @@ include $(OMV_BOARD_CONFIG_DIR)/board_config.mk
 LDSCRIPT  ?= alif
 BUILD := $(BUILD)/bootloader
 FIRMWARE := bootloader
-CMSIS_MCU_H := '<system_utils.h>'
+CMSIS_MCU_H := '<sys_utils.h>'
+ALIF_RTSS_CORE := RTSS_$(shell echo $(MCU_CORE) | cut -d_ -f2)
+ALIF_RTSS_CORE_DIR := $(shell echo $(ALIF_RTSS_CORE) | tr A-Z a-z)
+ALIF_SOC_DIR = $(TOP_DIR)/$(HAL_DIR)/Device/soc/$(MCU_VARIANT)
 
 # Compiler Flags
 CFLAGS += -std=gnu99 \
@@ -57,6 +60,7 @@ CFLAGS += -D__VFP_FP__ \
           -D$(TARGET) \
           -D$(MCU_CORE) \
           -DCORE_$(MCU_CORE)=1 \
+          -D$(ALIF_RTSS_CORE) \
           -D$(ARM_MATH) \
           -DARM_NN_TRUNCATE \
           -DETHOS_U \
@@ -77,11 +81,14 @@ CFLAGS += -I$(OMV_BOARD_CONFIG_DIR) \
           -I$(TOP_DIR)/$(HAL_DIR)/drivers/include \
           -I$(TOP_DIR)/$(HAL_DIR)/ospi_xip/source/ospi \
           -I$(TOP_DIR)/$(HAL_DIR)/se_services/include \
-          -I$(TOP_DIR)/$(HAL_DIR)/Device/common/config \
-          -I$(TOP_DIR)/$(HAL_DIR)/Device/common/include \
-          -I$(TOP_DIR)/$(HAL_DIR)/Device/core/$(MCU_CORE)/config \
-          -I$(TOP_DIR)/$(HAL_DIR)/Device/core/$(MCU_CORE)/include \
-          -I$(TOP_DIR)/$(HAL_DIR)/Device/$(MCU_SERIES)/$(MCU_VARIANT) \
+          -I$(TOP_DIR)/$(HAL_DIR)/Device/core/common/config \
+          -I$(TOP_DIR)/$(HAL_DIR)/Device/core/common/include \
+          -I$(TOP_DIR)/$(HAL_DIR)/Device/core/$(ALIF_RTSS_CORE_DIR)/config \
+          -I$(TOP_DIR)/$(HAL_DIR)/Device/system/include \
+          -I$(ALIF_SOC_DIR)/config \
+          -I$(ALIF_SOC_DIR)/include \
+          -I$(ALIF_SOC_DIR)/include/$(ALIF_RTSS_CORE_DIR) \
+          -I$(ALIF_SOC_DIR)/rte \
           -I$(TOP_DIR)/$(TINYUSB_DIR)/src
 
 # Linker Flags
@@ -136,14 +143,16 @@ SRC_C += $(addprefix $(HAL_DIR)/, \
 	drivers/source/mhu_driver.c \
 	drivers/source/mhu_receiver.c \
 	drivers/source/mhu_sender.c \
-	Device/common/source/clk.c \
-	Device/common/source/dcd.c \
-	Device/common/source/mpu_M55.c \
-	Device/common/source/tgu_M55.c \
-	Device/common/source/system_M55.c \
-	Device/common/source/system_utils.c \
-	Device/common/source/tcm_partition.c \
-	Device/core/$(MCU_CORE)/source/startup_$(MCU_CORE).c \
+	drivers/source/dcd_alif.c \
+	Device/core/common/source/cache.c \
+	Device/core/common/source/mpu.c \
+	Device/core/common/source/sau_tcm_ns_setup.c \
+	Device/core/common/source/startup.c \
+	Device/core/common/source/system.c \
+	Device/core/common/source/tgu.c \
+	Device/core/common/source/vectors.c \
+	Device/system/source/sys_clocks.c \
+	Device/system/source/sys_utils.c \
 	se_services/source/services_host_clocks.c \
 	se_services/source/services_host_handler.c \
 	se_services/source/services_host_power.c \
