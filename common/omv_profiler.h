@@ -29,9 +29,6 @@
 #if OMV_PROFILER_ENABLE
 #include <stdio.h>
 #include "py/mphal.h"
-#if __PMU_PRESENT
-#include "pmu_armv8.h"
-#endif
 #ifndef __cplusplus
 #include "common/mutex.h"
 #endif
