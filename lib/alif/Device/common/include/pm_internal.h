@@ -30,12 +30,14 @@ extern "C"
 {
 #endif
 
+#if (__CM_CMSIS_VERSION < 0x00060000)
 /* Coprocessor Power Control Register Definitions */
 #define ICB_CPPWR_SU11_Pos         22U                             /*!< CPPWR: State Unknown 11 Position */
 #define ICB_CPPWR_SU11_Msk        (0x1UL << ICB_CPPWR_SU11_Pos)    /*!< CPPWR: State Unknown 11 Mask */
 
 #define ICB_CPPWR_SU10_Pos         20U                             /*!< CPPWR: State Unknown 10 Position */
 #define ICB_CPPWR_SU10_Msk        (0x1UL << ICB_CPPWR_SU10_Pos)    /*!< CPPWR: State Unknown 10 Mask */
+#endif
 
 
 /**
