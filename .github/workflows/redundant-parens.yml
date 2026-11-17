@@ -1,0 +1,56 @@
+name: '🔎 Check Redundant Parentheses'
+
+# Reports parentheses that are redundant given C operator precedence, on the
+# lines a pull request adds. It only looks at added lines, so it gates new
+# code without requiring the existing tree to be cleaned up first.
+#
+# This is a best-effort parse (no per-board compile flags), so expressions
+# whose types do not resolve are skipped rather than misreported. Point the
+# tool at a compile_commands.json for full coverage.
+
+on:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+    branches:
+      - 'master'
+    paths:
+      - '**/*.c'
+      - '**/*.h'
+
+jobs:
+  parens-check:
+    runs-on: ubuntu-24.04
+    steps:
+    - name: '⏳ Checkout repository'
+      uses: actions/checkout@v7
+      with:
+        submodules: false
+        persist-credentials: false
+        fetch-depth: 0
+
+    - name: '🐍 Set up Python'
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.x'
+
+    - name: '📦 Install libclang'
+      run: pip install libclang
+
+    - name: '🔎 Check parentheses on changed lines'
+      run: |
+        base='${{ github.event.pull_request.base.sha }}'
+        # OpenMV-authored C only (mirror the code-format scope).
+        files=$(git diff --name-only "$base"...HEAD -- \
+          'common/*.c' 'common/*.h' \
+          'modules/*.c' 'modules/*.h' \
+          'ports/**/*.c' 'ports/**/*.h' \
+          'drivers/sensors/*.c' 'drivers/sensors/*.h' \
+          'lib/imlib/*.c' 'lib/imlib/*.h')
+        if [ -z "$files" ]; then
+          echo "No OpenMV-authored C files changed."
+          exit 0
+        fi
+        python tools/check_redundant_parens.py --diff-base "$base" $files
