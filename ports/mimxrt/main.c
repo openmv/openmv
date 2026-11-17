@@ -67,6 +67,7 @@
 
 #include "board_config.h"
 #include "framebuffer.h"
+#include "py_image.h"
 #include "omv_csi.h"
 #include "file_utils.h"
 #include "mp_utils.h"
@@ -109,6 +110,7 @@ soft_reset:
     imlib_init();
     readline_init0();
     framebuffer_init0();
+    py_font_init0();
     omv_csi_init0();
     machine_adc_init();
     #if MICROPY_PY_MACHINE_SDCARD

@@ -138,6 +138,12 @@ ci_run_qemu_tests() {
 }
 
 ########################################################################################
+# Run the host side unit tests (build tools), scripts/unittest/host/test_*.py
+ci_run_host_tests() {
+    python3 -m unittest discover -s scripts/unittest/host -p "test_*.py" -v
+}
+
+########################################################################################
 # Install FVP
 FVP_VERSION="11.31.28"
 FVP_INSTALL_DIR="${HOME}/fvp-${FVP_VERSION}"

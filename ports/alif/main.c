@@ -75,6 +75,7 @@
 
 #include "board_config.h"
 #include "framebuffer.h"
+#include "py_image.h"
 #include "file_utils.h"
 #include "mp_utils.h"
 #include "omv_csi.h"
@@ -132,6 +133,7 @@ soft_reset:
     uma_init();
     readline_init0();
     framebuffer_init0();
+    py_font_init0();
     #if MICROPY_PY_CSI
     omv_csi_init0();
     #endif

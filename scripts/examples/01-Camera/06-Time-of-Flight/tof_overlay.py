@@ -55,7 +55,6 @@ while True:
         (0, 0),
         f"Distance min: {int(dmin):4d}mm max: {int(dmax):4d}mm zones: {valid:2d}/{len(status)}",
         color=(255, 0, 0),
-        mono_space=False,
     )
 
     # Print FPS.
