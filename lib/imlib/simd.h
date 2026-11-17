@@ -1861,6 +1861,18 @@ static inline void vst2_u16_len(uint16_t *p, v2x_rows_t v0, uint32_t len) {
     }
 }
 
+static inline void vst2_u32(uint32_t *p, v2x_rows_t v0) {
+    #if (__ARM_ARCH >= 8)
+    uint32x4x2_t rows;
+    rows.val[0] = v0.r0.u32;
+    rows.val[1] = v0.r1.u32;
+    vst2q(p, rows);
+    #else
+    p[0] = v0.r0.u32[0];
+    p[1] = v0.r1.u32[0];
+    #endif
+}
+
 // n is in bytes, but, known to be a multiple of 1 with 1-byte alignment.
 static inline void vmemcpy_8(void *dest, void *src, size_t n) {
     #if (__ARM_ARCH >= 8)
