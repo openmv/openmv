@@ -1,0 +1,116 @@
+{
+  "0": {
+    "size": "0x1800000",
+    "entries": [
+    {
+      "type": "tflite",
+      "path": "{TOP}/lib/models/micro_speech.tflite",
+      "alignment": 16,
+      "optimize": "Performance"
+    },
+    {
+      "type": "tflite",
+      "path": "{TOP}/lib/models/audio_preprocessor.tflite",
+      "alignment": 16,
+      "optimize": "Performance"
+    },
+    {
+      "type": "tflite",
+      "path": "{TOP}/lib/models/fomo_face_detection.tflite",
+      "alignment": 16,
+      "optimize": "Performance"
+    },
+    {
+      "type": "tflite",
+      "path": "{TOP}/lib/models/person_detect.tflite",
+      "alignment": 16,
+      "optimize": "Performance"
+    },
+    {
+      "type": "tflite",
+      "path": "{TOP}/lib/models/yolo_lc_192.tflite",
+      "alignment": 16,
+      "optimize": "Performance"
+    },
+    {
+      "type": "tflite",
+      "path": "{TOP}/lib/models/force_int_quant.tflite",
+      "alignment": 16,
+      "optimize": "Performance"
+    },
+    {
+      "type": "tflite",
+      "path": "{TOP}/lib/models/yolov8n_192.tflite",
+      "alignment": 16,
+      "optimize": "Performance"
+    },
+    {
+      "type": "tflite",
+      "path": "{TOP}/lib/models/blazeface_front_128.tflite",
+      "alignment": 16,
+      "optimize": "Performance"
+    },
+    {
+      "type": "tflite",
+      "path": "{TOP}/lib/models/face_landmarks_192.tflite",
+      "alignment": 16,
+      "optimize": "Performance"
+    },
+    {
+      "type": "tflite",
+      "path": "{TOP}/lib/models/palm_detection_full_192.tflite",
+      "alignment": 16,
+      "optimize": "Performance"
+    },
+    {
+      "type": "tflite",
+      "path": "{TOP}/lib/models/hand_landmarks_full_224.tflite",
+      "alignment": 16,
+      "optimize": "Performance"
+    },
+    {
+      "type": "tflite",
+      "path": "{TOP}/lib/models/movenet_singlepose_192.tflite",
+      "alignment": 16,
+      "optimize": "Performance"
+    },
+    {
+      "type": "haar",
+      "path": "{TOP}/lib/haar/haarcascade_eye.xml",
+      "stages": 0
+    },
+    {
+      "type": "haar",
+      "path": "{TOP}/lib/haar/haarcascade_smile.xml",
+      "stages": 0
+    },
+    {
+      "type": "haar",
+      "path": "{TOP}/lib/haar/haarcascade_frontalface.xml",
+      "stages": 0
+    }
+    ]
+  },
+  "1": {
+    "size": "0x100000",
+    "entries": [
+    {
+      "type": "tflite",
+      "path": "{TOP}/lib/models/micro_speech.tflite",
+      "alignment": 16,
+      "optimize": "Performance"
+    },
+    {
+        "type": "tflite",
+        "path": "{TOP}/lib/models/audio_preprocessor.tflite",
+        "optimize": "Performance"
+    },
+    {
+      "type": "tflite",
+      "path": "{TOP}/lib/models/force_int_quant.tflite",
+      "alignment": 16,
+      "optimize": "Performance"
+    }
+    ]
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "metadata": {
+    "device": "AE402FA0E5597LE0",
+    "project": "",
+    "external_clock_sources": [
+      {
+        "id": "OSC_HFXO",
+        "enabled": true,
+        "frequency": 38400000
+      },
+      {
+        "id": "OSC_LFXO",
+        "enabled": true,
+        "frequency": 32768
+      }
+    ]
+  },
+  "firewall": {
+    "firewall_components": [],
+    "region_stitching": false
+  },
+  "pinmux": [],
+  "clocks": {},
+  "miscellaneous": [
+    {
+      "id": "SHARED_MEM_CTRL",
+      "value": "0x80000000"
+    }
+  ]
+}
