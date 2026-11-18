@@ -39,8 +39,10 @@ void imlib_deyuv_line(int x_start, int x_end, int y_row, void *dst_row_ptr, pixf
 
     uint16_t *rowptr_yuv = ((uint16_t *) src->data) + (y_row * src_w);
 
+    // YUV pixels share their chroma in pairs that start on even columns, so start from the pair
+    // of the first pixel and skip the pixel before an odd start column.
     // If the image is an odd width this will go for the last loop and we drop the last column.
-    for (int x = x_start; x < x_end; x += 2) {
+    for (int x = x_start & ~1; x < x_end; x += 2) {
         int32_t row_yuv; // signed
 
         // keep pixels in bounds
@@ -61,7 +63,9 @@ void imlib_deyuv_line(int x_start, int x_end, int y_row, void *dst_row_ptr, pixf
         switch (pixfmt) {
             case PIXFORMAT_BINARY: {
                 uint32_t *row_ptr_32 = (uint32_t *) dst_row_ptr;
-                IMAGE_PUT_BINARY_PIXEL_FAST(row_ptr_32, x, (y0 >> 7));
+                if (x >= x_start) {
+                    IMAGE_PUT_BINARY_PIXEL_FAST(row_ptr_32, x, (y0 >> 7));
+                }
 
                 if (x != w_limit) {
                     IMAGE_PUT_BINARY_PIXEL_FAST(row_ptr_32, x + 1, (y1 >> 7));
@@ -71,7 +75,9 @@ void imlib_deyuv_line(int x_start, int x_end, int y_row, void *dst_row_ptr, pixf
             }
             case PIXFORMAT_GRAYSCALE: {
                 uint8_t *row_ptr_8 = (uint8_t *) dst_row_ptr;
-                IMAGE_PUT_GRAYSCALE_PIXEL_FAST(row_ptr_8, x, y0);
+                if (x >= x_start) {
+                    IMAGE_PUT_GRAYSCALE_PIXEL_FAST(row_ptr_8, x, y0);
+                }
 
                 if (x != w_limit) {
                     IMAGE_PUT_GRAYSCALE_PIXEL_FAST(row_ptr_8, x + 1, y1);
@@ -104,7 +110,9 @@ void imlib_deyuv_line(int x_start, int x_end, int y_row, void *dst_row_ptr, pixf
                 g0 = __USAT(g0, 8);
                 b0 = __USAT(b0, 8);
                 int rgb565_0 = COLOR_R8_G8_B8_TO_RGB565(r0, g0, b0);
-                IMAGE_PUT_RGB565_PIXEL_FAST(row_ptr_16, x, rgb565_0);
+                if (x >= x_start) {
+                    IMAGE_PUT_RGB565_PIXEL_FAST(row_ptr_16, x, rgb565_0);
+                }
 
                 if (x != w_limit) {
                     int r1 = y1 + ry, g1 = y1 - gy, b1 = y1 + by;

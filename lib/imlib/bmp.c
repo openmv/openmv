@@ -290,6 +290,11 @@ static void bmp_write_header(file_t *fp, uint32_t header_size, uint32_t data_siz
 }
 
 void bmp_write_subimg(image_t *img, const char *path, rectangle_t *r) {
+    // Also reached without an extension (imlib_save_image), so check the format here too.
+    if (!(IM_IS_GS(img) || IM_IS_RGB565(img) || IM_IS_BAYER(img) || IM_IS_YUV(img))) {
+        mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Image can't be saved as BMP"));
+    }
+
     rectangle_t rect;
     if (!rectangle_subimg(img, r, &rect)) {
         mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("No intersection!"));
@@ -326,15 +331,31 @@ void bmp_write_subimg(image_t *img, const char *path, rectangle_t *r) {
         bmp_write_header(&fp, 12, data_size, 16, 3, &rect);
         // Write Bit Masks (12 bytes)
         file_write(&fp, (uint32_t [3]) {0x1F << 11, 0x3F << 5, 0x1F}, 12);
-        uint8_t *row_buf = uma_calloc(row_bytes, UMA_DTCM);
-        for (int i = 0; i < rect.h; i++) {
-            uint16_t *row16 = (uint16_t *) row_buf;
-            for (int j = 0; j < rect.w; j++) {
-                row16[j] = IM_GET_RGB565_PIXEL(img, (rect.x + j), (rect.y + i));
+        if (IM_IS_RGB565(img)) {
+            uint8_t *row_buf = uma_calloc(row_bytes, UMA_DTCM);
+            for (int i = 0; i < rect.h; i++) {
+                uint16_t *row16 = (uint16_t *) row_buf;
+                for (int j = 0; j < rect.w; j++) {
+                    row16[j] = IM_GET_RGB565_PIXEL(img, (rect.x + j), (rect.y + i));
+                }
+                file_write(&fp, row_buf, row_bytes);
             }
-            file_write(&fp, row_buf, row_bytes);
+            uma_free(row_buf);
+        } else {
+            // BAYER/YUV: the line converters write each pixel at its source column, so the line
+            // spans the columns before the ROI plus one padded BMP row, and the file is written
+            // from the ROI's start column.
+            uint16_t *line = uma_calloc(rect.x * sizeof(uint16_t) + row_bytes, UMA_DTCM);
+            for (int i = 0; i < rect.h; i++) {
+                if (IM_IS_BAYER(img)) {
+                    imlib_debayer_line(rect.x, rect.x + rect.w, rect.y + i, line, PIXFORMAT_RGB565, img);
+                } else {
+                    imlib_deyuv_line(rect.x, rect.x + rect.w, rect.y + i, line, PIXFORMAT_RGB565, img);
+                }
+                file_write(&fp, line + rect.x, row_bytes);
+            }
+            uma_free(line);
         }
-        uma_free(row_buf);
     }
     file_close(&fp);
 }
