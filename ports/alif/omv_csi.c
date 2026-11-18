@@ -40,6 +40,7 @@
 #include "py/runtime.h"
 
 #include "alif_hal.h"
+#include "alif_isp.h"
 #include "cpi.h"
 #include "sys_ctrl_cpi.h"
 #include "sys_clocks.h"
@@ -86,6 +87,10 @@
 #define CPI_PIX_CLKSEL_PLL_HZ       SOC_FEAT_PIX_CLKSEL_PLL_HZ
 #else
 #define CPI_PIX_CLKSEL_PLL_HZ       (480000000)
+#endif
+
+#if OMV_CSI_ISP_ENABLE && !defined(OMV_CSI_MIPI_LANES)
+#error "The ISP is only supported with MIPI CSI-2 sensors."
 #endif
 
 #if defined(OMV_CSI_MIPI_LANES)
@@ -165,9 +170,14 @@ void CAM_IRQHandler(void) {
 }
 
 static bool alif_csi_is_active(omv_csi_t *csi) {
+    #if OMV_CSI_ISP_ENABLE
+    // The CPI runs continuously while the ISP is streaming.
+    return alif_isp_is_active(csi);
+    #else
     CPI_Type *cpi = csi->base;
 
     return (cpi->CAM_CTRL & CAM_CTRL_BUSY);
+    #endif
 }
 
 #if defined(OMV_CSI_MIPI_LANES)
@@ -204,6 +214,7 @@ static int alif_mipi_dphy_init(omv_csi_t *csi) {
 
 // Configure the CSI-2 host IPI for the current frame size, following the
 // DFP's camera timing calculations, and set the CPI to receive from it.
+// The CPI passes the RAW10 data to the ISP, if enabled, or stores it as RAW8.
 static void alif_mipi_config(omv_csi_t *csi) {
     CSI_Type *csi2 = (CSI_Type *) CSI_BASE;
     CPI_Type *cpi = csi->base;
@@ -245,11 +256,19 @@ static void alif_mipi_config(omv_csi_t *csi) {
     csi_disable_software_reset_state(csi2);
     csi_enable_ipi_mode(csi2);
 
-    // Receive from the CSI-2 IPI, and store the RAW10 data as RAW8.
     cpi->CAM_CFG |= (CPI_INTERFACE_MIPI_CSI << CAM_CFG_INTERFACE_Pos);
-    cpi->CAM_CFG &= ~CAM_CFG_DATA_MODE_Msk;
+    cpi->CAM_CFG &= ~(CAM_CFG_DATA_MODE_Msk | (1U << CAM_CFG_AXI_PORT_Pos) | (1U << CAM_CFG_ISP_PORT_Pos));
+
+    #if OMV_CSI_ISP_ENABLE
+    // More than 8 bits per sample needs the 16-bit data mode.
+    cpi->CAM_CFG |= (1U << CAM_CFG_ISP_PORT_Pos);
+    cpi->CAM_CFG |= (CPI_DATA_MODE_BIT_16 << CAM_CFG_DATA_MODE_Pos);
+    cpi->CAM_CSI_CMCFG = CPI_COLOR_MODE_CONFIG_IPI16_RAW10;
+    #else
+    cpi->CAM_CFG |= (1U << CAM_CFG_AXI_PORT_Pos);
     cpi->CAM_CFG |= (CPI_DATA_MODE_BIT_8 << CAM_CFG_DATA_MODE_Pos);
     cpi->CAM_CSI_CMCFG = CPI_COLOR_MODE_CONFIG_IPI16_RAW8;
+    #endif
 }
 #endif
 
@@ -309,6 +328,14 @@ int alif_csi_abort(omv_csi_t *csi, bool fifo_flush, bool in_irq) {
     NVIC_DisableIRQ(CAM_IRQ_IRQn);
     cpi_disable_interrupt(cpi, CPI_IRQ_FLAGS);
 
+    #if OMV_CSI_ISP_ENABLE
+    // Stop the ISP, and the continuous capture after the current frame.
+    if (!in_irq) {
+        alif_isp_stop(csi);
+        cpi->CAM_CTRL = 0;
+    }
+    #endif
+
     // The CPI always finishes the current frame, and writing CAM_CTRL while
     // it's busy is undefined. Wait for the frame to end, then reset the CPI.
     // In an IRQ, leave it to the next start or abort.
@@ -354,6 +381,9 @@ static int alif_clk_set_frequency(omv_clk_t *clk, uint32_t frequency) {
 
 static uint32_t omv_csi_get_fb_offset(omv_csi_t *csi) {
     uint32_t offset = 0;
+
+    // With the ISP, there's no debayer buffer.
+    #if !OMV_CSI_ISP_ENABLE
     uint32_t bytes_per_pixel = omv_csi_get_src_bpp(csi);
     uint32_t line_size_bytes = csi->resolution[csi->framesize][0] * bytes_per_pixel;
 
@@ -361,6 +391,7 @@ static uint32_t omv_csi_get_fb_offset(omv_csi_t *csi) {
     if (csi->raw_output && csi->pixformat == PIXFORMAT_RGB565) {
         offset += line_size_bytes * csi->resolution[csi->framesize][1];
     }
+    #endif
 
     return offset;
 }
@@ -396,6 +427,35 @@ int alif_csi_snapshot(omv_csi_t *csi, image_t *dst_image, uint32_t flags) {
             return OMV_CSI_ERROR_INVALID_FRAMESIZE;
         }
 
+        #if OMV_CSI_ISP_ENABLE
+        bool cpi_active = cpi->CAM_CTRL & CAM_CTRL_BUSY;
+
+        if (!cpi_active) {
+            if (alif_mipi_dphy_init(csi) != 0) {
+                return OMV_CSI_ERROR_CSI_INIT_FAILED;
+            }
+            alif_mipi_config(csi);
+        }
+
+        // Start the ISP before the CPI feeds it.
+        if (alif_isp_start(csi) != 0) {
+            return OMV_CSI_ERROR_CSI_INIT_FAILED;
+        }
+
+        if (!cpi_active) {
+            // The CPI passes one sample per transfer to the ISP, and the row
+            // size is in samples.
+            cpi->CAM_VIDEO_FCFG &= ~CAM_VIDEO_FCFG_DATA_Msk;
+            cpi->CAM_VIDEO_FCFG = csi->resolution[csi->framesize][0];
+            cpi->CAM_VIDEO_FCFG &= ~CAM_VIDEO_FCFG_ROW_Msk;
+            cpi->CAM_VIDEO_FCFG |= ((csi->resolution[csi->framesize][1] - 1) << CAM_VIDEO_FCFG_ROW_Pos);
+
+            // Reset the CPI and start capturing continuously.
+            cpi->CAM_CTRL = 0;
+            cpi->CAM_CTRL = CAM_CTRL_SW_RESET;
+            cpi->CAM_CTRL = (CAM_CTRL_START | CAM_CTRL_FIFO_CLK_SEL);
+        }
+        #else
         #if defined(OMV_CSI_MIPI_LANES)
         if (csi->mipi_if) {
             if (alif_mipi_dphy_init(csi) != 0) {
@@ -403,7 +463,7 @@ int alif_csi_snapshot(omv_csi_t *csi, image_t *dst_image, uint32_t flags) {
             }
             alif_mipi_config(csi);
         }
-        #endif
+        #endif // defined(OMV_CSI_MIPI_LANES)
 
         if (!csi->raw_output &&
             ((csi->pixformat == PIXFORMAT_RGB565 && csi->rgb_swap) ||
@@ -440,6 +500,7 @@ int alif_csi_snapshot(omv_csi_t *csi, image_t *dst_image, uint32_t flags) {
         cpi->CAM_CTRL = 0;
         cpi->CAM_CTRL = CAM_CTRL_SW_RESET;
         cpi->CAM_CTRL = (CAM_CTRL_SNAPSHOT | CAM_CTRL_START | CAM_CTRL_FIFO_CLK_SEL);
+        #endif
     }
 
     // One shot DMA transfers must be invalidated.
@@ -491,15 +552,57 @@ int alif_csi_snapshot(omv_csi_t *csi, image_t *dst_image, uint32_t flags) {
     // Initialize a frame using the frame buffer.
     framebuffer_to_image(fb, dst_image);
 
+    #if OMV_CSI_ISP_ENABLE
+    if (csi->pixformat != PIXFORMAT_BAYER) {
+        // Update the white balance gains from the sensor's RGB stats, for the next frames.
+        if (csi->stats_enabled) {
+            omv_csi_ioctl_arg_t arg = {0};
+            int ret = omv_csi_ioctl(csi, OMV_CSI_IOCTL_GET_RGB_STATS, &arg);
+            if (ret != 0) {
+                return ret;
+            }
+
+            uint32_t r = arg.rgb_stats.r;
+            uint32_t b = arg.rgb_stats.b;
+            uint32_t g = (arg.rgb_stats.gb + arg.rgb_stats.gr) / 2;
+            omv_csi_stats_update(csi, &r, &g, &b, mp_hal_ticks_ms());
+        }
+
+        float r_gain, g_gain, b_gain;
+        omv_csi_stats_get_gains(csi, &r_gain, &g_gain, &b_gain);
+        alif_isp_set_wb_gains(r_gain, g_gain, b_gain);
+    }
+
+    // The ISP crops the frame to the window if it can, otherwise it's cropped below.
+    bool isp_cropped = alif_isp_crops_window(csi);
+
+    // The ISP outputs YUV422 for RGB565. Convert it in place (each YUV422 pixel pair
+    // is read before it's written). The ISP writes Y0 Cb Y1 Cr, which is imlib's
+    // YVU422 byte order.
+    if (csi->pixformat == PIXFORMAT_RGB565) {
+        image_t yuv_image = {
+            .w = isp_cropped ? fb->u : csi->resolution[csi->framesize][0],
+            .h = isp_cropped ? fb->v : csi->resolution[csi->framesize][1],
+            .pixfmt = PIXFORMAT_YVU422,
+            .data = dst_image->data,
+        };
+        image_t rgb_image = yuv_image;
+        rgb_image.pixfmt = PIXFORMAT_RGB565;
+        imlib_deyuv_image(&rgb_image, &yuv_image);
+    }
+    #else
+    bool isp_cropped = false;
+
     // Set the frame's pixel format to bayer for raw sensors.
     if (csi->raw_output && csi->pixformat != PIXFORMAT_BAYER) {
         dst_image->pixfmt = PIXFORMAT_BAYER;
         dst_image->subfmt_id = csi->cfa_format;
         dst_image->pixfmt = imlib_bayer_shift(dst_image->pixfmt, fb->x, fb->y, csi->transpose);
     }
+    #endif
 
     // Crop first to reduce the frame size before debayering.
-    if (omv_csi_get_cropped(csi)) {
+    if (omv_csi_get_cropped(csi) && !isp_cropped) {
         image_t src_cimage = *dst_image;
         image_t dst_cimage = *dst_image;
 
@@ -519,6 +622,7 @@ int alif_csi_snapshot(omv_csi_t *csi, image_t *dst_image, uint32_t flags) {
         }
     }
 
+    #if !OMV_CSI_ISP_ENABLE
     // Debayer the frame to match the target pixel format.
     if (csi->raw_output && csi->pixformat != PIXFORMAT_BAYER) {
         image_t src_image = *dst_image;
@@ -551,8 +655,16 @@ int alif_csi_snapshot(omv_csi_t *csi, image_t *dst_image, uint32_t flags) {
         // Debayer frame.
         imlib_debayer_image_awb(dst_image, &src_image, false, r_gain, g_gain, b_gain);
     }
+    #endif
     return 0;
 }
+
+#if OMV_CSI_ISP_ENABLE
+// The ISP outputs the target pixel format.
+uint32_t omv_csi_get_src_bpp(omv_csi_t *csi) {
+    return omv_csi_get_dst_bpp(csi);
+}
+#endif
 
 int omv_csi_ops_init(omv_csi_t *csi) {
     // Set CPI base (LP/CPI).

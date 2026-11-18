@@ -178,6 +178,11 @@ ifeq ($(MICROPY_PY_ML_TFLM), 1)
 LIBS += $(TOP_DIR)/$(TENSORFLOW_DIR)/libtflm/lib/libtflm-$(CPU)-ethosu-release.a
 endif
 
+# Nothing from the ISP library is linked in unless the board enables the ISP
+# (OMV_CSI_ISP_ENABLE), since only alif_isp.c references it.
+CFLAGS += -I$(TOP_DIR)/$(HAL_DIR)/libs/isp/inc
+LIBS += $(TOP_DIR)/$(HAL_DIR)/libs/isp/libisp_gcc.a
+
 ###################################################
 all: $(ROMFS_IMAGE)
 	$(SIZE) $(FW_DIR)/$(FIRMWARE).elf
