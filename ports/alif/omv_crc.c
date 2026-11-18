@@ -22,10 +22,7 @@
  * THE SOFTWARE.
  */
 #include "crc.h"
-#include "global_map.h"
 #include "omv_crc.h"
-
-#define CRC0 ((CRC_Type *) CRC0_BASE)
 
 static bool crc32_initialized = false;
 static void crc_calculate(CRC_Type *crc, const void *buf, uint32_t len, uint32_t *value);
@@ -82,7 +79,7 @@ static void crc_calculate(CRC_Type *crc, const void *buf, uint32_t len, uint32_t
 
         const uint32_t *data32 = (const uint32_t *) data;
         for (uint32_t i = 0; i < aligned_len / 4; i++) {
-            crc->CRC_DATA_IN_32_0 = data32[i];
+            crc->CRC_DATA_IN_32_[0] = data32[i];
         }
         *value = crc->CRC_OUT;
     }

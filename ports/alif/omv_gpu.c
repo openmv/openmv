@@ -36,10 +36,10 @@
 #include "py/mphal.h"
 #include "py/runtime.h"
 
+#include "omv_gpu.h"
 #include "dave_d0lib.h"
 #include "dave_registermap.h"
 #include "dave_driver.h"
-#include "omv_gpu.h"
 
 static d2_device *dev;
 static d2_color CLUT_BUFFER[256];

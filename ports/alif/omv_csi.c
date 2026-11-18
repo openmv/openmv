@@ -41,7 +41,7 @@
 #include "alif_hal.h"
 #include "cpi.h"
 #include "sys_ctrl_cpi.h"
-#include "system_utils.h"
+#include "sys_utils.h"
 
 #include "board_config.h"
 #include "omv_gpio.h"
@@ -227,13 +227,13 @@ static uint32_t alif_clk_get_frequency(omv_clk_t *clk) {
 static int alif_clk_set_frequency(omv_clk_t *clk, uint32_t frequency) {
     // Configure CPI clock source (400MHz or 480MHz) and divider.
     if (frequency >= 24000000) {
-        set_cpi_pixel_clk(CPI_PIX_CLKSEL_480MZ, 20);
+        set_cpi_pixel_clk(CPI_PIX_CLKSEL_PLL, 20);
     } else if (frequency >= 12000000) {
-        set_cpi_pixel_clk(CPI_PIX_CLKSEL_480MZ, 40);
+        set_cpi_pixel_clk(CPI_PIX_CLKSEL_PLL, 40);
     } else if (frequency >= 6000000) {
-        set_cpi_pixel_clk(CPI_PIX_CLKSEL_480MZ, 80);
+        set_cpi_pixel_clk(CPI_PIX_CLKSEL_PLL, 80);
     } else {
-        set_cpi_pixel_clk(CPI_PIX_CLKSEL_400MZ, 100);
+        set_cpi_pixel_clk(CPI_PIX_CLKSEL_AXI, 100);
     }
     return 0;
 }

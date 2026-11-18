@@ -43,7 +43,7 @@
 #include "dma_ctrl.h"
 #include "dma_config.h"
 #include "dma_opcode.h"
-#include "dma_mapping.h"
+#include "soc_dma_map.h"
 
 #include "sys_ctrl_i2s.h"
 #include "sys_ctrl_dma.h"
@@ -291,7 +291,7 @@ int dma_alloc(dma_channel_t *channel, dma_config_t *config) {
 
     // Configure event router.
     if (dma_descr->is_local) {
-        evtrtrlocal_enable_dma_channel(config->request & 0xFF, DMA_ACK_COMPLETION_PERIPHERAL);
+        evtrtrlocal_enable_dma_channel(config->request & 0xFF, 0, DMA_ACK_COMPLETION_PERIPHERAL);
     } else {
         evtrtr0_enable_dma_channel(config->request & 0xFF, config->request >> 8, DMA_ACK_COMPLETION_PERIPHERAL);
         evtrtr0_enable_dma_handshake(config->request & 0xFF, config->request >> 8);
@@ -346,7 +346,7 @@ int dma_start(dma_channel_t *channel, void *src, void *dst0, void *dst1, uint32_
 
     // Set transfer source, destination and and total size.
     chn_descr->desc_info.src_addr = LocalToGlobal(src);
-    chn_descr->desc_info.dst_addr0 = LocalToGlobal(dst0);
+    chn_descr->desc_info.dst_addr = LocalToGlobal(dst0);
     chn_descr->desc_info.dst_addr1 = LocalToGlobal(dst1);
     chn_descr->desc_info.total_len = size;
 
@@ -438,10 +438,10 @@ void *dma_target_address(dma_channel_t *channel) {
     if (chn_descr->desc_info.dst_addr1 == 0) {
         // Single buffer mode.
         return GlobalToLocal(target);
-    } else if (target == chn_descr->desc_info.dst_addr0) {
+    } else if (target == chn_descr->desc_info.dst_addr) {
         return GlobalToLocal(chn_descr->desc_info.dst_addr1);
     } else {
-        return GlobalToLocal(chn_descr->desc_info.dst_addr0);
+        return GlobalToLocal(chn_descr->desc_info.dst_addr);
     }
 }
 
