@@ -146,7 +146,7 @@ endif
 CFLAGS += -DOMV_PROFILER_ENABLE=1
 CFLAGS += -DOMV_PROFILER_HASH_SIZE=$(PROFILE_HASH)
 CFLAGS += -DOMV_PROFILER_IRQ_ENABLE=$(PROFILE_IRQ)
-CFLAGS += -finstrument-functions-exclude-file-list=lib/cmsis,lib/stm32,/lib/mimxrt,lib/alif,simd.h
+CFLAGS += -finstrument-functions-exclude-file-list=lib/cmsis,lib/stm32,/lib/mimxrt,lib/alif-dfp,simd.h
 endif
 
 # Include OpenMV board config first to set the port.
