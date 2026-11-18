@@ -841,6 +841,20 @@ static inline v128_t vshlc(v128_t v0, uint32_t *reg, uint32_t n) {
 }
 #endif
 
+static inline v128_t vadd_s16(v128_t v0, v128_t v1) {
+    #if (__ARM_ARCH >= 8)
+    return (v128_t) vaddq_s16(v0.s16, v1.s16);
+    #elif (__ARM_ARCH >= 7)
+    return (v128_t) {
+        .u32 = { __SADD16(v0.u32[0], v1.u32[0]) }
+    };
+    #else
+    return (v128_t) {
+        .s16 = v0.s16 + v1.s16
+    };
+    #endif
+}
+
 static inline v128_t vadd_u32(v128_t v0, v128_t v1) {
     #if (__ARM_ARCH >= 8)
     return (v128_t) vaddq_u32(v0.u32, v1.u32);
@@ -936,6 +950,21 @@ static inline v128_t vsub_s16(v128_t v0, v128_t v1) {
     };
     #endif
 }
+
+// Saturates signed 16-bit lanes to the unsigned range [0, (1 << n) - 1].
+#if (__ARM_ARCH >= 8)
+#define vusat_s16(v0, n) \
+    ((v128_t) vminq(vmaxq((v0).s16, vdupq_n_s16(0)), vdupq_n_s16((1 << (n)) - 1)))
+#elif (__ARM_ARCH >= 7)
+#define vusat_s16(v0, n) ((v128_t) { .u32 = { __USAT16((v0).u32[0], n) } })
+#else
+static inline v128_t vusat_s16(v128_t v0, uint32_t n) {
+    for (uint32_t i = 0; i < INT16_VECTOR_SIZE; i++) {
+        v0.s16[i] = IM_CLAMP(v0.s16[i], 0, (1 << n) - 1);
+    }
+    return v0;
+}
+#endif
 
 static inline v128_t vsub_n_u32(v128_t v0, uint32_t x) {
     #if (__ARM_ARCH >= 8)
