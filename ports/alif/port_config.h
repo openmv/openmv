@@ -34,7 +34,7 @@
 #define __PORT_CONFIG_H__
 
 #include <stdlib.h>
-#include "clk.h"
+#include "sys_clocks.h"
 #include "i2c.h"
 #include "i3c.h"
 #include "spi.h"

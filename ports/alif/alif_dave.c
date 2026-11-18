@@ -9,7 +9,6 @@
  */
 #include <string.h>
 #include CMSIS_MCU_H
-#include "global_map.h"
 #include "dave_base.h"
 #include "dave_d0lib.h"
 #include "dave_registermap.h"
