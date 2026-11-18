@@ -172,6 +172,10 @@ int alif_csi_config(omv_csi_t *csi, omv_csi_config_t config) {
         cpi->CAM_CFG = 0;
         // Configure the capture interface (CPI, LPCPI or CSI).
         cpi->CAM_CFG |= (CPI_INTERFACE_PARALLEL << CAM_CFG_INTERFACE_Pos);
+        #if SOC_FEAT_HAS_ISP
+        // On parts with an ISP, the output must be routed to the AXI port.
+        cpi->CAM_CFG |= (1U << CAM_CFG_AXI_PORT_Pos);
+        #endif
         cpi->CAM_CFG |= (CPI_VSYNC_MODE_DISABLE << CAM_CFG_VSYNC_MODE_Pos);
         cpi->CAM_CFG |= (CPI_VSYNC_WAIT_DISABLE << CAM_CFG_VSYNC_WAIT_Pos);
 
