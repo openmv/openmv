@@ -41,6 +41,7 @@
 #include "alif_hal.h"
 #include "cpi.h"
 #include "sys_ctrl_cpi.h"
+#include "sys_clocks.h"
 #include "sys_utils.h"
 
 #include "board_config.h"
@@ -73,6 +74,13 @@
 
 // Longest wait for a capture in progress to finish before the CPI is reset.
 #define OMV_CSI_ABORT_TIMEOUT_MS    (200)
+
+// The CPI pixel clock source selected by CLK_SEL.
+#if defined(SOC_FEAT_PIX_CLKSEL_PLL_HZ)
+#define CPI_PIX_CLKSEL_PLL_HZ       SOC_FEAT_PIX_CLKSEL_PLL_HZ
+#else
+#define CPI_PIX_CLKSEL_PLL_HZ       (480000000)
+#endif
 
 static uint32_t omv_csi_get_fb_offset(omv_csi_t *csi);
 
@@ -218,22 +226,22 @@ static uint32_t alif_clk_get_frequency(omv_clk_t *clk) {
     uint32_t div = (CLKCTL_PER_MST->CAMERA_PIXCLK_CTRL & CAMERA_PIXCLK_CTRL_DIVISOR_Msk) >>
                    CAMERA_PIXCLK_CTRL_DIVISOR_Pos;
     if (CLKCTL_PER_MST->CAMERA_PIXCLK_CTRL & CAMERA_PIXCLK_CTRL_CLK_SEL) {
-        return 480000000 / div;
+        return CPI_PIX_CLKSEL_PLL_HZ / div;
     } else {
-        return 400000000 / div;
+        return GetSystemAXIClock() / div;
     }
 }
 
 static int alif_clk_set_frequency(omv_clk_t *clk, uint32_t frequency) {
-    // Configure CPI clock source (400MHz or 480MHz) and divider.
+    // Configure the CPI clock source and the divider closest to 24, 12 or 6MHz.
     if (frequency >= 24000000) {
-        set_cpi_pixel_clk(CPI_PIX_CLKSEL_PLL, 20);
+        set_cpi_pixel_clk(CPI_PIX_CLKSEL_PLL, (CPI_PIX_CLKSEL_PLL_HZ + 12000000) / 24000000);
     } else if (frequency >= 12000000) {
-        set_cpi_pixel_clk(CPI_PIX_CLKSEL_PLL, 40);
+        set_cpi_pixel_clk(CPI_PIX_CLKSEL_PLL, (CPI_PIX_CLKSEL_PLL_HZ + 6000000) / 12000000);
     } else if (frequency >= 6000000) {
-        set_cpi_pixel_clk(CPI_PIX_CLKSEL_PLL, 80);
+        set_cpi_pixel_clk(CPI_PIX_CLKSEL_PLL, (CPI_PIX_CLKSEL_PLL_HZ + 3000000) / 6000000);
     } else {
-        set_cpi_pixel_clk(CPI_PIX_CLKSEL_AXI, 100);
+        set_cpi_pixel_clk(CPI_PIX_CLKSEL_AXI, (GetSystemAXIClock() + 2000000) / 4000000);
     }
     return 0;
 }
