@@ -383,7 +383,8 @@ int alif_hal_csi_init(CPI_Type *cpi) {
         enable_lpcpi_periph_clk();
     }
 
-    // Configure CPI pins.
+    // Configure CPI pins (parallel interface only).
+    #if defined(OMV_CSI_D0_PIN)
     omv_gpio_config(OMV_CSI_D0_PIN, OMV_GPIO_MODE_ALT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_HIGH, -1);
     omv_gpio_config(OMV_CSI_D1_PIN, OMV_GPIO_MODE_ALT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_HIGH, -1);
     omv_gpio_config(OMV_CSI_D2_PIN, OMV_GPIO_MODE_ALT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_HIGH, -1);
@@ -396,6 +397,7 @@ int alif_hal_csi_init(CPI_Type *cpi) {
     omv_gpio_config(OMV_CSI_HSYNC_PIN, OMV_GPIO_MODE_ALT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_HIGH, -1);
     omv_gpio_config(OMV_CSI_VSYNC_PIN, OMV_GPIO_MODE_ALT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_HIGH, -1);
     omv_gpio_config(OMV_CSI_PXCLK_PIN, OMV_GPIO_MODE_ALT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_HIGH, -1);
+    #endif
     omv_gpio_config(OMV_CSI_MXCLK_PIN, OMV_GPIO_MODE_ALT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_HIGH, -1);
 
     return 0;

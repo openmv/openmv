@@ -35,6 +35,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <math.h>
 #include "py/mphal.h"
 #include "py/runtime.h"
 
@@ -45,6 +46,11 @@
 #include "sys_utils.h"
 
 #include "board_config.h"
+#if defined(OMV_CSI_MIPI_LANES)
+#include "csi.h"
+#include "sys_ctrl_csi.h"
+#include "DPHY_CSI2.h"
+#endif
 #include "omv_gpio.h"
 #include "omv_gpu.h"
 #include "omv_i2c.h"
@@ -80,6 +86,19 @@
 #define CPI_PIX_CLKSEL_PLL_HZ       SOC_FEAT_PIX_CLKSEL_PLL_HZ
 #else
 #define CPI_PIX_CLKSEL_PLL_HZ       (480000000)
+#endif
+
+#if defined(OMV_CSI_MIPI_LANES)
+// VBAT power control bits for the MIPI RX D-PHY.
+#define VBAT_PWR_CTRL_RX_DPHY_PWR_MASK  (1U << 4)
+#define VBAT_PWR_CTRL_RX_DPHY_ISO       (1U << 5)
+#define VBAT_PWR_CTRL_DPHY_VPH_1P8_VAL  (1U << 13)
+
+// The MIPI data is RAW10, stored as RAW8 by the CPI.
+#define CSI_MIPI_DATA_TYPE          (CSI_DT_RAW10)
+#define CSI_MIPI_BPP                (10)
+
+static bool alif_mipi_dphy_ready;
 #endif
 
 static uint32_t omv_csi_get_fb_offset(omv_csi_t *csi);
@@ -150,6 +169,89 @@ static bool alif_csi_is_active(omv_csi_t *csi) {
 
     return (cpi->CAM_CTRL & CAM_CTRL_BUSY);
 }
+
+#if defined(OMV_CSI_MIPI_LANES)
+// Initialize the MIPI RX D-PHY. The D-PHY waits for all lanes to enter the
+// stop state, so the sensor's output is suspended while it's initialized.
+static int alif_mipi_dphy_init(omv_csi_t *csi) {
+    if (alif_mipi_dphy_ready) {
+        return 0;
+    }
+
+    // Power up the MIPI RX D-PHY and its 1.8V supply.
+    VBAT->PWR_CTRL |= VBAT_PWR_CTRL_DPHY_VPH_1P8_VAL;
+    VBAT->PWR_CTRL &= ~(VBAT_PWR_CTRL_RX_DPHY_PWR_MASK | VBAT_PWR_CTRL_RX_DPHY_ISO);
+
+    if (csi->sleep != NULL) {
+        csi->sleep(csi, true);
+        mp_hal_delay_ms(10);
+    }
+
+    // The D-PHY frequency is the clock lane frequency (half the bit rate).
+    int32_t ret = CSI2_DPHY_Initialize(csi->mipi_brate * 1000000 / 2, OMV_CSI_MIPI_LANES);
+
+    if (csi->sleep != NULL) {
+        csi->sleep(csi, false);
+    }
+
+    if (ret != 0) {
+        return -1;
+    }
+
+    alif_mipi_dphy_ready = true;
+    return 0;
+}
+
+// Configure the CSI-2 host IPI for the current frame size, following the
+// DFP's camera timing calculations, and set the CPI to receive from it.
+static void alif_mipi_config(omv_csi_t *csi) {
+    CSI_Type *csi2 = (CSI_Type *) CSI_BASE;
+    CPI_Type *cpi = csi->base;
+    uint32_t width = csi->resolution[csi->framesize][0];
+    float frequency = csi->mipi_brate * 1000000.0f / 2.0f;
+
+    // Make the IPI bandwidth 20% higher than the D-PHY bandwidth.
+    float pixclk = (frequency * OMV_CSI_MIPI_LANES * 2 * 1.2f) / CSI_MIPI_BPP;
+    float aclk = (float) GetSystemAXIClock();
+    uint32_t div = (uint32_t) ((aclk / pixclk) + 0.5f);
+    set_csi_pixel_clk(CSI_PIX_CLKSEL_AXI, div);
+
+    float time_ppi_ns = (8.0f / frequency) * 1000000000.0f;
+    float time_ipi_ns = (div / aclk) * 1000000000.0f;
+    uint32_t bytes = (width * CSI_MIPI_BPP) / 8;
+
+    int32_t hsa = CSI2_HSA_MIN + 1;
+    int32_t hbp = ceilf(((2 * CSI2_SHORT_PKT_BYTES / OMV_CSI_MIPI_LANES + 2) *
+                         time_ppi_ns / CSI2_BYTES_PER_HS_CLK) / time_ipi_ns) - hsa + 1;
+    hbp = IM_MAX(hbp, CSI2_HBP_MIN);
+    int32_t hsd = ceilf((((CSI2_LONG_PKT_BYTES + bytes) / OMV_CSI_MIPI_LANES) *
+                         time_ppi_ns / CSI2_BYTES_PER_HS_CLK) / time_ipi_ns) -
+                  (hsa + hbp + width) + 1;
+    hsd = IM_MAX(hsd, CSI2_HSD_MIN);
+
+    csi_disable_ipi_mode(csi2);
+    csi_enable_software_reset_state(csi2);
+    csi_set_ipi_mode(csi2, CSI_IPI_MODE_CAM_TIMIMG);
+    csi_set_ipi_color_cop(csi2, CSI_IPI_COLOR_COM_TYPE_COLOR16);
+    csi_enable_ipi_mem_flush_auto(csi2);
+    csi_set_ipi_vc_id(csi2, 0);
+    csi_set_ipi_data_type(csi2, CSI_MIPI_DATA_TYPE);
+    csi_set_ipi_sync_event_type(csi2, CSI_IPI_SYNC_EVENT_FSN);
+    csi_set_ipi_line_event_selection(csi2, CSI_IPI_LINE_EVENT_SELECT_PROG);
+    csi_set_packet_configuration(csi2, CSI_IPI_EVENT_SELECTION_EN_VIDEO);
+    csi_disable_ipi_dt_overwrite(csi2);
+    csi_set_horizontal_timing(csi2, hsa, hbp, hsd, hsa + hbp + hsd);
+    csi_set_vertical_timing(csi2, 0, 0, 0, 0);
+    csi_disable_software_reset_state(csi2);
+    csi_enable_ipi_mode(csi2);
+
+    // Receive from the CSI-2 IPI, and store the RAW10 data as RAW8.
+    cpi->CAM_CFG |= (CPI_INTERFACE_MIPI_CSI << CAM_CFG_INTERFACE_Pos);
+    cpi->CAM_CFG &= ~CAM_CFG_DATA_MODE_Msk;
+    cpi->CAM_CFG |= (CPI_DATA_MODE_BIT_8 << CAM_CFG_DATA_MODE_Pos);
+    cpi->CAM_CSI_CMCFG = CPI_COLOR_MODE_CONFIG_IPI16_RAW8;
+}
+#endif
 
 int alif_csi_isp_reset(omv_csi_t *csi) {
     #ifdef IMLIB_ENABLE_GAMMA_LUT
@@ -293,6 +395,15 @@ int alif_csi_snapshot(omv_csi_t *csi, image_t *dst_image, uint32_t flags) {
             (csi->pixformat == PIXFORMAT_JPEG)) {
             return OMV_CSI_ERROR_INVALID_FRAMESIZE;
         }
+
+        #if defined(OMV_CSI_MIPI_LANES)
+        if (csi->mipi_if) {
+            if (alif_mipi_dphy_init(csi) != 0) {
+                return OMV_CSI_ERROR_CSI_INIT_FAILED;
+            }
+            alif_mipi_config(csi);
+        }
+        #endif
 
         if (!csi->raw_output &&
             ((csi->pixformat == PIXFORMAT_RGB565 && csi->rgb_swap) ||
