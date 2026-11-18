@@ -3286,11 +3286,17 @@ void imlib_draw_image(image_t *dst_img,
         src_y_accum_reset -= 0x8000;
     }
 
-    bool needs_row_buffer = !no_scaling_nearest_neighbor || (dst_img->data == src_img->data);
+    // Bayer and YUV sources that are converted to a mutable format are converted into the
+    // row buffer, otherwise their rows are used directly.
+    bool converts_src = (src_img->is_bayer || src_img->is_yuv) &&
+                        (new_not_mutable_pixfmt & PIXFORMAT_FLAGS_M);
+    bool needs_row_buffer = !no_scaling_nearest_neighbor || (dst_img->data == src_img->data) ||
+                            converts_src;
 
     imlib_draw_row_data_t imlib_draw_row_data = {0};
     imlib_draw_row_data.dst_img = dst_img;
-    imlib_draw_row_data.src_img_pixfmt = src_img->pixfmt;
+    // Converted Bayer and YUV rows are in the converted pixel format.
+    imlib_draw_row_data.src_img_pixfmt = converts_src ? new_not_mutable_pixfmt : src_img->pixfmt;
     imlib_draw_row_data.rgb_channel = rgb_channel;
     imlib_draw_row_data.alpha = alpha;
     imlib_draw_row_data.color_palette = color_palette;
