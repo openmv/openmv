@@ -53,6 +53,15 @@
 #define ETHOSU_IRQ_HANDLER      LOCAL_NPU_IRQHandler
 #define ETHOSU_BASE_ADDRESS     (void *) LOCAL_NPU_BASE
 
+// The driver creates a semaphore per driver (NPU IRQ) and one per NPU variant
+// (driver reservation), so two for the single NPU used by each core.
+#define ETHOSU_SEMAPHORE_COUNT  (2)
+
+// Give up on an NPU command stream after this long. The driver then resets the
+// NPU and the inference fails, instead of the CPU waiting for an IRQ forever.
+#define ETHOSU_INFERENCE_TIMEOUT_MS (5000)
+
+
 #if (ETHOSU_CACHE_SIZE == 0)
 static uint8_t * ETHOSU_CACHE_BUFFER = NULL;
 #else
@@ -81,20 +90,30 @@ static struct ethosu_device_config ethosu_u55_device_config = {
 
 struct ethosu_semaphore_t {
     uint8_t count;
+    bool used;
 };
 
+static struct ethosu_semaphore_t ethosu_semaphores[ETHOSU_SEMAPHORE_COUNT];
+
 void *ethosu_semaphore_create(void) {
-    // The default implementation allocates this dynamically,
-    // but there's no need for more than one semaphore, so a
-    // static one can be used.
-    static struct ethosu_semaphore_t sem;
-    sem.count = 0;
-    return &sem;
+    // The default implementation allocates these dynamically.
+    for (size_t i = 0; i < ETHOSU_SEMAPHORE_COUNT; i++) {
+        if (!ethosu_semaphores[i].used) {
+            ethosu_semaphores[i].used = true;
+            ethosu_semaphores[i].count = 0;
+            return &ethosu_semaphores[i];
+        }
+    }
+    return NULL;
 }
 
 int ethosu_semaphore_take(void *sem, uint64_t timeout) {
     struct ethosu_semaphore_t *s = sem;
+    mp_uint_t start = mp_hal_ticks_ms();
     while (s->count == 0) {
+        if ((mp_hal_ticks_ms() - start) >= ETHOSU_INFERENCE_TIMEOUT_MS) {
+            return -1;
+        }
         __WFE();
     }
     s->count--;
@@ -109,7 +128,8 @@ int ethosu_semaphore_give(void *sem) {
 }
 
 void ethosu_semaphore_destroy(void *sem) {
-    // The Semaphore is statically allocated.
+    struct ethosu_semaphore_t *s = sem;
+    s->used = false;
 }
 
 static inline bool is_mram(const void *p, size_t bytes) {
