@@ -61,6 +61,24 @@ static uint8_t OMV_ATTR_SEC_ALIGN(ETHOSU_CACHE_BUFFER[ETHOSU_CACHE_SIZE], ".bss.
 
 static struct ethosu_driver ethosu_driver;
 
+// The command stream and all regions use AXI_LIMIT0 or AXI_LIMIT1 (the M0 port), with
+// 128-byte bursts and normal (modifiable) non-cacheable transactions.
+static struct u55_config_t ethosu_u55_config = {
+    .qconfig.cmd_region0 = 0,
+    .regioncfg = {
+        .region0 = 0, .region1 = 0, .region2 = 1, .region3 = 1,
+        .region4 = 1, .region5 = 1, .region6 = 1, .region7 = 1,
+    },
+    .axi_limit0 = { .max_beats = 1, .memtype = 2, .max_outstanding_read_m1 = 31, .max_outstanding_write_m1 = 15 },
+    .axi_limit1 = { .max_beats = 1, .memtype = 2, .max_outstanding_read_m1 = 31, .max_outstanding_write_m1 = 15 },
+    .axi_limit2 = { .max_beats = 1, .memtype = 2, .max_outstanding_read_m1 = 31, .max_outstanding_write_m1 = 15 },
+    .axi_limit3 = { .max_beats = 1, .memtype = 2, .max_outstanding_read_m1 = 31, .max_outstanding_write_m1 = 15 },
+};
+
+static struct ethosu_device_config ethosu_u55_device_config = {
+    .config = &ethosu_u55_config,
+};
+
 struct ethosu_semaphore_t {
     uint8_t count;
 };
@@ -151,7 +169,7 @@ int alif_npu_init(void) {
     // Initialize Ethos-U.
     if (ethosu_init_ex(&ethosu_driver,              /* Ethos-U driver device pointer */
                        &ethosu_device_desc_u55,     /* Ethos-U device descriptor. */
-                       &ethosu_device_config_u55,   /* Ethos-U device config. */
+                       &ethosu_u55_device_config,   /* Ethos-U device config. */
                        &ethosu_user_ops,            /* Ethos-U device user ops. */
                        ETHOSU_BASE_ADDRESS,         /* Ethos-U NPU's base address. */
                        ETHOSU_CACHE_BUFFER,         /* Pointer to fast mem area - NULL for U55. */
