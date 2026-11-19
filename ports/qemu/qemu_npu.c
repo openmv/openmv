@@ -69,27 +69,21 @@ int ethosu_semaphore_give(void *sem) {
 void ethosu_semaphore_destroy(void *sem) {
 }
 
-void ethosu_flush_dcache(uint32_t *p, size_t bytes) {
-    if (!p) {
-        SCB_CleanDCache();
-    } else {
-        SCB_CleanDCache_by_Addr(p, bytes);
+void ethosu_flush_dcache(const uint64_t *base_addr, const size_t *base_addr_size, int num_base_addr) {
+    for (int i = 0; i < num_base_addr; i++) {
+        SCB_CleanDCache_by_Addr((void *) (uintptr_t) base_addr[i], base_addr_size[i]);
     }
 }
 
-void ethosu_invalidate_dcache(uint32_t *p, size_t bytes) {
-    if (!p) {
-        SCB_CleanInvalidateDCache();
-    } else {
-        SCB_InvalidateDCache_by_Addr(p, bytes);
+void ethosu_invalidate_dcache(const uint64_t *base_addr, const size_t *base_addr_size, int num_base_addr) {
+    for (int i = 0; i < num_base_addr; i++) {
+        SCB_InvalidateDCache_by_Addr((void *) (uintptr_t) base_addr[i], base_addr_size[i]);
     }
-}
-
-uint64_t ethosu_address_remap(uint64_t address, int index) {
-    return address;
 }
 
 void ethosu_inference_begin(struct ethosu_driver *drv, void *user_arg) {
+    // The driver doesn't flush the command stream, which may be in a model loaded to RAM.
+    SCB_CleanDCache_by_Addr((void *) drv->job.custom_data_ptr, drv->job.custom_data_size);
     imlib_poll_events_noexc();
 }
 
@@ -102,12 +96,15 @@ static void ETHOSU_IRQ_Handler(void) {
 }
 
 int qemu_npu_init(void) {
-    if (ethosu_init(&ethosu_driver,
-                    ETHOSU_BASE_ADDRESS,
-                    NULL,
-                    0,
-                    1,
-                    1)) {
+    if (ethosu_init_ex(&ethosu_driver,
+                       &ethosu_device_desc_u55,
+                       &ethosu_device_config_u55,
+                       NULL,
+                       ETHOSU_BASE_ADDRESS,
+                       NULL,
+                       0,
+                       1,
+                       1)) {
         return -1;
     }
 

@@ -99,29 +99,43 @@ static inline bool is_mram(const void *p, size_t bytes) {
     return addr >= MRAM_BASE && addr + bytes <= MRAM_BASE + MRAM_SIZE;
 }
 
-void ethosu_flush_dcache(uint32_t *p, size_t bytes) {
-    if (!p) {
-        SCB_CleanDCache();
-    } else if (omv_memory_is_write_back(p, bytes)) {
-        SCB_CleanDCache_by_Addr(p, bytes);
+void ethosu_flush_dcache(const uint64_t *base_addr, const size_t *base_addr_size, int num_base_addr) {
+    for (int i = 0; i < num_base_addr; i++) {
+        void *p = (void *) (uintptr_t) base_addr[i];
+        size_t bytes = base_addr_size[i];
+        if (omv_memory_is_write_back(p, bytes)) {
+            SCB_CleanDCache_by_Addr(p, bytes);
+        }
     }
 }
 
-void ethosu_invalidate_dcache(uint32_t *p, size_t bytes) {
-    // MRAM is cached write-through, so it is cacheable, but it was never invalidated
-    // before. It's excluded to keep that behavior, the NPU only reads it (e.g. weights).
-    if (!p) {
-        SCB_CleanInvalidateDCache();
-    } else if (!is_mram(p, bytes) && omv_memory_is_cacheable(p, bytes)) {
-        SCB_InvalidateDCache_by_Addr(p, bytes);
+void ethosu_invalidate_dcache(const uint64_t *base_addr, const size_t *base_addr_size, int num_base_addr) {
+    for (int i = 0; i < num_base_addr; i++) {
+        void *p = (void *) (uintptr_t) base_addr[i];
+        size_t bytes = base_addr_size[i];
+        // MRAM is cached write-through, so it is cacheable, but it was never invalidated
+        // before. It's excluded to keep that behavior, the NPU only reads it (e.g. weights).
+        if (!is_mram(p, bytes) && omv_memory_is_cacheable(p, bytes)) {
+            SCB_InvalidateDCache_by_Addr(p, bytes);
+        }
     }
 }
 
-uint64_t ethosu_address_remap(uint64_t address, int index) {
+static uint64_t ethosu_address_remap(uint64_t address, int index) {
     return LocalToGlobal((void *) (uint32_t) address);
 }
 
+static struct ethosu_device_user_ops ethosu_user_ops = {
+    .address_remap = ethosu_address_remap,
+};
+
 void ethosu_inference_begin(struct ethosu_driver *drv, void *user_arg) {
+    // The driver doesn't flush the command stream, which may be in a model loaded to RAM.
+    void *p = (void *) drv->job.custom_data_ptr;
+    size_t bytes = drv->job.custom_data_size;
+    if (omv_memory_is_write_back(p, bytes)) {
+        SCB_CleanDCache_by_Addr(p, bytes);
+    }
     imlib_poll_events_noexc();
 }
 
@@ -135,12 +149,15 @@ void ETHOSU_IRQ_HANDLER(void) {
 
 int alif_npu_init(void) {
     // Initialize Ethos-U.
-    if (ethosu_init(&ethosu_driver,         /* Ethos-U driver device pointer */
-                    ETHOSU_BASE_ADDRESS,    /* Ethos-U NPU's base address. */
-                    ETHOSU_CACHE_BUFFER,    /* Pointer to fast mem area - NULL for U55. */
-                    ETHOSU_CACHE_SIZE,      /* Fast mem region size. */
-                    ETHOSU_SEC_ENABLED,     /* Security enable. */
-                    ETHOSU_PRIV_ENABLED)) {
+    if (ethosu_init_ex(&ethosu_driver,              /* Ethos-U driver device pointer */
+                       &ethosu_device_desc_u55,     /* Ethos-U device descriptor. */
+                       &ethosu_device_config_u55,   /* Ethos-U device config. */
+                       &ethosu_user_ops,            /* Ethos-U device user ops. */
+                       ETHOSU_BASE_ADDRESS,         /* Ethos-U NPU's base address. */
+                       ETHOSU_CACHE_BUFFER,         /* Pointer to fast mem area - NULL for U55. */
+                       ETHOSU_CACHE_SIZE,           /* Fast mem region size. */
+                       ETHOSU_SEC_ENABLED,          /* Security enable. */
+                       ETHOSU_PRIV_ENABLED)) {
         /* Privilege enable. */
         return -1;
     }
