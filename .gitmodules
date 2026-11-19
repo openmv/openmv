@@ -20,3 +20,6 @@
 [submodule "scripts/libraries/microdot"]
 	path = scripts/libraries/microdot
 	url = https://github.com/miguelgrinberg/microdot.git
+[submodule "lib/cmsis/src/nn"]
+	path = lib/cmsis/src/nn
+	url = https://github.com/openmv/CMSIS-NN.git
