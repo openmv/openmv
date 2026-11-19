@@ -46,10 +46,8 @@ $(BUILD)/lib/tflm/tflm_backend.o: CXXFLAGS = \
     -I$(TOP_DIR)/lib/tflm/libtflm/include \
     -I$(TOP_DIR)/lib/tflm/libtflm/include/third_party \
     -I$(TOP_DIR)/lib/tflm/libtflm/include/third_party/gemmlowp \
-    -I$(TOP_DIR)/lib/tflm/libtflm/include/third_party/flatbuffers/include \
-    -I$(TOP_DIR)/lib/tflm/libtflm/include/third_party/ethos_u_core_driver/include
+    -I$(TOP_DIR)/lib/tflm/libtflm/include/third_party/flatbuffers/include
 
 OMV_CFLAGS += -I$(TOP_DIR)/lib/tflm/libtflm/include
-OMV_CFLAGS += -I$(TOP_DIR)/lib/tflm/libtflm/include/third_party/ethos_u_core_driver/include
 OMV_FIRM_OBJ += $(addprefix $(BUILD)/lib/tflm/, $(TFLM_SRC_CC:.cc=.o))
 endif

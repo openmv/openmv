@@ -23,3 +23,6 @@
 [submodule "lib/cmsis/src/nn"]
 	path = lib/cmsis/src/nn
 	url = https://github.com/openmv/CMSIS-NN.git
+[submodule "drivers/ethosu"]
+	path = drivers/ethosu
+	url = https://github.com/openmv/ethos-u-core-driver.git
