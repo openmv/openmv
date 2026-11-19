@@ -27,7 +27,7 @@ TFLM_SRC_CC = tflm_backend.cc
 
 $(BUILD)/lib/tflm/tflm_backend.o: CXXFLAGS = \
     $(filter-out -std=gnu99 -std=gnu11,$(CFLAGS)) \
-    -std=c++11 \
+    -std=c++17 \
     -fno-rtti \
     -fno-exceptions \
     -fno-use-cxa-atexit \
@@ -38,6 +38,7 @@ $(BUILD)/lib/tflm/tflm_backend.o: CXXFLAGS = \
     -fno-threadsafe-statics \
     -Wno-double-promotion \
     -Wno-float-conversion \
+    -Wno-register \
     -DTF_LITE_STATIC_MEMORY \
     -DTF_LITE_DISABLE_X86_NEON \
     -DKERNELS_OPTIMIZED_FOR_SPEED \

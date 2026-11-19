@@ -9,7 +9,7 @@ CMSIS_MCU_H = \"mps3_an547.h\"
 OMV_BOARD_CFLAGS= -mcmse \
                   -DQEMU_SOC_MPS3 \
                   -DCPU_FREQ_HZ=32000000 \
-                  -DETHOS_U -DETHOSU55 \
+                  -DETHOS_U -DETHOSU_MULTI_VARIANT \
                   -DOMV_NOSYS_STUBS_ENABLE=1
 DEBUGGER=NONE
 VELA_ARGS= "--accelerator-config ethos-u55-256 \

@@ -68,6 +68,7 @@ CFLAGS += -D__VFP_FP__ \
           -D$(ARM_MATH) \
           -DARM_NN_TRUNCATE \
           -DETHOS_U \
+          -DETHOSU_MULTI_VARIANT \
           -DPINS_AF_H=$(PINS_AF_H) \
           -DCMSIS_MCU_H=$(CMSIS_MCU_H) \
           -DALIF_CMSIS_H=$(CMSIS_MCU_H) \
@@ -173,7 +174,7 @@ include common/micropy.mk
 
 # Libraries
 ifeq ($(MICROPY_PY_ML_TFLM), 1)
-LIBS += $(TOP_DIR)/$(TENSORFLOW_DIR)/libtflm/lib/libtflm-$(CPU)-u55-release.a
+LIBS += $(TOP_DIR)/$(TENSORFLOW_DIR)/libtflm/lib/libtflm-$(CPU)-ethosu-release.a
 endif
 
 ###################################################

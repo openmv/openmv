@@ -114,7 +114,7 @@ include common/micropy.mk
 ifeq ($(MICROPY_PY_ML_TFLM), 1)
 ifeq ($(CPU),cortex-m55)
 ifneq ($(filter -DETHOS_U,$(OMV_BOARD_CFLAGS)),)
-LIBS += $(TOP_DIR)/$(TENSORFLOW_DIR)/libtflm/lib/libtflm-cortex-m55-u55-release.a
+LIBS += $(TOP_DIR)/$(TENSORFLOW_DIR)/libtflm/lib/libtflm-cortex-m55-ethosu-release.a
 else
 LIBS += $(TOP_DIR)/$(TENSORFLOW_DIR)/libtflm/lib/libtflm-cortex-m55-release.a
 endif

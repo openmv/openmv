@@ -111,6 +111,8 @@ static char ml_backend_map_dtype(TfLiteType type) {
 }
 
 static void ml_backend_init_ops_resolver(MicroOpsResolver *resolver) {
+    // MICROPY_PY_ML_TFLM_SMALL excludes rarely used ops (comparisons, SelectV2 and
+    // SquaredDifference) to save flash on boards with small flash.
     resolver->AddAbs();
     resolver->AddAdd();
     resolver->AddAddN();
@@ -139,7 +141,9 @@ static void ml_backend_init_ops_resolver(MicroOpsResolver *resolver) {
     resolver->AddElu();
     resolver->AddEmbeddingLookup();
     resolver->AddEnergy();
+    #if !MICROPY_PY_ML_TFLM_SMALL
     resolver->AddEqual();
+    #endif
     #ifdef ETHOS_U
     resolver->AddEthosU();
     #endif
@@ -158,16 +162,20 @@ static void ml_backend_init_ops_resolver(MicroOpsResolver *resolver) {
     resolver->AddFullyConnected();
     resolver->AddGather();
     resolver->AddGatherNd();
+    #if !MICROPY_PY_ML_TFLM_SMALL
     resolver->AddGreater();
     resolver->AddGreaterEqual();
+    #endif
     resolver->AddHardSwish();
     resolver->AddIf();
     resolver->AddIrfft();
     resolver->AddL2Normalization();
     resolver->AddL2Pool2D();
     resolver->AddLeakyRelu();
+    #if !MICROPY_PY_ML_TFLM_SMALL
     resolver->AddLess();
     resolver->AddLessEqual();
+    #endif
     resolver->AddLog();
     resolver->AddLogSoftmax();
     resolver->AddLogicalAnd();
@@ -181,7 +189,9 @@ static void ml_backend_init_ops_resolver(MicroOpsResolver *resolver) {
     resolver->AddMirrorPad();
     resolver->AddMul();
     resolver->AddNeg();
+    #if !MICROPY_PY_ML_TFLM_SMALL
     resolver->AddNotEqual();
+    #endif
     resolver->AddOverlapAdd();
     resolver->AddPCAN();
     resolver->AddPack();
@@ -199,7 +209,9 @@ static void ml_backend_init_ops_resolver(MicroOpsResolver *resolver) {
     resolver->AddRfft();
     resolver->AddRound();
     resolver->AddRsqrt();
+    #if !MICROPY_PY_ML_TFLM_SMALL
     resolver->AddSelectV2();
+    #endif
     resolver->AddShape();
     resolver->AddSin();
     resolver->AddSlice();
@@ -210,7 +222,9 @@ static void ml_backend_init_ops_resolver(MicroOpsResolver *resolver) {
     resolver->AddSplitV();
     resolver->AddSqrt();
     resolver->AddSquare();
+    #if !MICROPY_PY_ML_TFLM_SMALL
     resolver->AddSquaredDifference();
+    #endif
     resolver->AddSqueeze();
     resolver->AddStacker();
     resolver->AddStridedSlice();
