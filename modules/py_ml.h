@@ -53,21 +53,41 @@ typedef struct py_ml_model_obj {
     mp_obj_tuple_t *output_zero_point;
     mp_obj_tuple_t *output_dtype;
     mp_obj_t postprocess; // Post-processing object.
+    const struct ml_backend *backend; // Backend that loaded the model.
     void *state; // Private context for the backend.
 } py_ml_model_obj_t;
 
-// Initialize a model.
-int ml_backend_init_model(py_ml_model_obj_t *model);
+// ML backend interface.
+typedef struct ml_backend {
+    // Backend name.
+    const char *name;
 
-// Run any backend deinitialization needed when a model is released.
-void ml_backend_deinit_model(py_ml_model_obj_t *model);
+    // Return true if the backend can load the model data.
+    bool (*probe) (const uint8_t *data, size_t size);
 
-// Run inference.
-int ml_backend_run_inference(py_ml_model_obj_t *model);
+    // Initialize a model.
+    int (*init_model) (py_ml_model_obj_t *model);
 
-// Return an input tensor by index.
-void *ml_backend_get_input(py_ml_model_obj_t *model, size_t index);
+    // Run any backend deinitialization needed when a model is released.
+    void (*deinit_model) (py_ml_model_obj_t *model);
 
-// Return an output tensor by index.
-void *ml_backend_get_output(py_ml_model_obj_t *model, size_t index);
+    // Run inference.
+    int (*run_inference) (py_ml_model_obj_t *model);
+
+    // Return an input tensor by index.
+    void *(*get_input) (py_ml_model_obj_t *model, size_t index);
+
+    // Return an output tensor by index.
+    void *(*get_output) (py_ml_model_obj_t *model, size_t index);
+} ml_backend_t;
+
+#if MICROPY_PY_ML_TFLM
+extern const ml_backend_t ml_backend_tflm;
+#endif
+#if MICROPY_PY_ML_STAI
+extern const ml_backend_t ml_backend_stai;
+#endif
+#if MICROPY_PY_ML_TORCH
+extern const ml_backend_t ml_backend_torch;
+#endif
 #endif // __PY_ML_H__

@@ -120,7 +120,7 @@ static int ml_backend_npu_init() {
     return 0;
 }
 
-int ml_backend_init_model(py_ml_model_obj_t *model) {
+static int ml_backend_init_model(py_ml_model_obj_t *model) {
     if (ml_backend_npu_init() != 0) {
         mp_raise_msg(&mp_type_RuntimeError, MP_ERROR_TEXT("Failed to initialize NPU"));
         return -1;
@@ -275,7 +275,7 @@ int ml_backend_init_model(py_ml_model_obj_t *model) {
     return 0;
 }
 
-void ml_backend_deinit_model(py_ml_model_obj_t *model) {
+static void ml_backend_deinit_model(py_ml_model_obj_t *model) {
     ml_backend_state_t *state = (ml_backend_state_t *) model->state;
 
     if (state) {
@@ -284,7 +284,7 @@ void ml_backend_deinit_model(py_ml_model_obj_t *model) {
     }
 }
 
-int ml_backend_run_inference(py_ml_model_obj_t *model) {
+static int ml_backend_run_inference(py_ml_model_obj_t *model) {
     LL_ATON_RT_RetValues_t ll_aton_rt_ret;
     ml_backend_state_t *state = (ml_backend_state_t *) model->state;
 
@@ -332,7 +332,7 @@ int ml_backend_run_inference(py_ml_model_obj_t *model) {
     return 0;
 }
 
-void *ml_backend_get_input(py_ml_model_obj_t *model, size_t index) {
+static void *ml_backend_get_input(py_ml_model_obj_t *model, size_t index) {
     ml_backend_state_t *state = (ml_backend_state_t *) model->state;
 
     if (index < model->inputs_size) {
@@ -343,7 +343,7 @@ void *ml_backend_get_input(py_ml_model_obj_t *model, size_t index) {
     mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("invalid input tensor index"));
 }
 
-void *ml_backend_get_output(py_ml_model_obj_t *model, size_t index) {
+static void *ml_backend_get_output(py_ml_model_obj_t *model, size_t index) {
     ml_backend_state_t *state = (ml_backend_state_t *) model->state;
 
     if (index < model->outputs_size) {
@@ -354,3 +354,23 @@ void *ml_backend_get_output(py_ml_model_obj_t *model, size_t index) {
 
     mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Invalid output tensor index"));
 }
+
+static bool ml_backend_probe(const uint8_t *data, size_t size) {
+    // Relocatable networks start with the reloc binary header magic.
+    uint32_t magic;
+    if (size < sizeof(magic)) {
+        return false;
+    }
+    memcpy(&magic, data, sizeof(magic));
+    return magic == AI_RELOC_MAGIC;
+}
+
+const ml_backend_t ml_backend_stai = {
+    .name = "stai",
+    .probe = ml_backend_probe,
+    .init_model = ml_backend_init_model,
+    .deinit_model = ml_backend_deinit_model,
+    .run_inference = ml_backend_run_inference,
+    .get_input = ml_backend_get_input,
+    .get_output = ml_backend_get_output,
+};

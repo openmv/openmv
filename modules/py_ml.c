@@ -53,6 +53,19 @@
 
 #define IMLIB_ML_MODEL_ALIGN    (OMV_CACHE_LINE_SIZE)
 
+// Backends compiled into the firmware, probed in order.
+static const ml_backend_t *const py_ml_backends[] = {
+    #if MICROPY_PY_ML_TFLM
+    &ml_backend_tflm,
+    #endif
+    #if MICROPY_PY_ML_STAI
+    &ml_backend_stai,
+    #endif
+    #if MICROPY_PY_ML_TORCH
+    &ml_backend_torch,
+    #endif
+};
+
 static size_t py_ml_tuple_sum(mp_obj_tuple_t *o) {
     if (o->len < 1) {
         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Unexpected tensor shape"));
@@ -68,6 +81,7 @@ static size_t py_ml_tuple_sum(mp_obj_tuple_t *o) {
 static size_t py_ml_dtype_size(char dtype) {
     switch (dtype) {
         case 'f':
+        case 'i':
             return 4;
         case 'H':
         case 'h':
@@ -81,7 +95,7 @@ static void py_ml_process_input(py_ml_model_obj_t *model, mp_obj_t arg) {
     mp_obj_list_t *input_list = MP_OBJ_TO_PTR(arg);
 
     for (size_t i = 0; i < model->inputs_size; i++) {
-        void *input_buffer = ml_backend_get_input(model, i);
+        void *input_buffer = model->backend->get_input(model, i);
         size_t input_size = py_ml_tuple_sum(MP_OBJ_TO_PTR(model->input_shape->items[i]));
         mp_obj_tuple_t *input_shape = MP_OBJ_TO_PTR(model->input_shape->items[i]);
         float input_scale = 1.0f / mp_obj_get_float_to_f(model->input_scale->items[i]);
@@ -154,7 +168,7 @@ static void py_ml_process_input(py_ml_model_obj_t *model, mp_obj_t arg) {
 static mp_obj_t py_ml_process_output(py_ml_model_obj_t *model, bool deep_copy) {
     mp_obj_list_t *output_list = MP_OBJ_TO_PTR(mp_obj_new_list(model->outputs_size, NULL));
     for (size_t i = 0; i < model->outputs_size; i++) {
-        void *model_output = ml_backend_get_output(model, i);
+        void *model_output = model->backend->get_output(model, i);
         size_t size = py_ml_tuple_sum(MP_OBJ_TO_PTR(model->output_shape->items[i]));
         mp_obj_tuple_t *output_shape = MP_OBJ_TO_PTR(model->output_shape->items[i]);
         float output_scale = mp_obj_get_float_to_f(model->output_scale->items[i]);
@@ -265,7 +279,7 @@ static mp_obj_t py_ml_model_predict(size_t n_args, const mp_obj_t *pos_args, mp_
     bool postprocess = model->postprocess != mp_const_none || callback;
 
     py_ml_process_input(model, pos_args[1]);
-    ml_backend_run_inference(model);
+    model->backend->run_inference(model);
 
     mp_obj_t output = py_ml_process_output(model, !postprocess);
 
@@ -341,6 +355,7 @@ mp_obj_t py_ml_model_make_new(const mp_obj_type_t *type, size_t n_args, size_t n
     model->postprocess = args[ARG_postprocess].u_obj;
     // Set by the backend, but the finaliser can run before that on failure.
     model->state = NULL;
+    model->backend = NULL;
 
     #if MICROPY_VFS
     mp_obj_t file_args[2] = {
@@ -397,14 +412,27 @@ mp_obj_t py_ml_model_make_new(const mp_obj_type_t *type, size_t n_args, size_t n
     mp_raise_msg(&mp_type_RuntimeError, MP_ERROR_TEXT("File I/O is not supported"));
     #endif
 
+    // Select the first backend that accepts the model.
+    for (size_t i = 0; i < MP_ARRAY_SIZE(py_ml_backends); i++) {
+        if (py_ml_backends[i]->probe(model->data, model->size)) {
+            model->backend = py_ml_backends[i];
+            break;
+        }
+    }
 
-    ml_backend_init_model(model);
+    if (model->backend == NULL) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Unsupported model format"));
+    }
+
+    model->backend->init_model(model);
     return MP_OBJ_FROM_PTR(model);
 }
 
 static mp_obj_t py_ml_model_deinit(mp_obj_t self_in) {
     py_ml_model_obj_t *model = MP_OBJ_TO_PTR(self_in);
-    ml_backend_deinit_model(model);
+    if (model->backend) {
+        model->backend->deinit_model(model);
+    }
     if (!model->managed) {
         uma_free(model->data);
     }
