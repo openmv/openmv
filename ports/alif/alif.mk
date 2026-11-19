@@ -125,7 +125,12 @@ else
 $(error Invalid MCU core specified))
 endif
 
-ifeq ($(MCU_CORE),M55_HP)
+ifeq ($(OMV_NPU_U85_ENABLE),1)
+CFLAGS += -DOMV_NPU_U85_ENABLE=1
+VELA_ARGS="--system-config RTSS_HG_SRAM_OSPI \
+           --accelerator-config ethos-u85-256 \
+           --memory-mode Shared_Sram"
+else ifeq ($(MCU_CORE),M55_HP)
 VELA_ARGS="--system-config RTSS_HP_SRAM_OSPI \
            --accelerator-config ethos-u55-256 \
            --memory-mode Shared_Sram"

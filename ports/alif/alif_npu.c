@@ -49,9 +49,20 @@
 #define ETHOSU_CACHE_SIZE       (0)
 #define ETHOSU_CACHE_ALIGN      (16)
 
+#if OMV_NPU_U85_ENABLE
+// The device header has no IRQn for the NPU-HG.
+#define ETHOSU_IRQ_NUMBER       ((IRQn_Type) 366)
+#define ETHOSU_IRQ_HANDLER      IRQ366_Handler
+#define ETHOSU_BASE_ADDRESS     (void *) NPU_HG_BASE
+#define ETHOSU_DEVICE_DESC      ethosu_device_desc_u85
+#define ETHOSU_DEVICE_CONFIG    ethosu_u85_device_config
+#else
 #define ETHOSU_IRQ_NUMBER       NPULOCAL_IRQ_IRQn
 #define ETHOSU_IRQ_HANDLER      NPULOCAL_IRQHandler
 #define ETHOSU_BASE_ADDRESS     (void *) NPULOCAL_BASE
+#define ETHOSU_DEVICE_DESC      ethosu_device_desc_u55
+#define ETHOSU_DEVICE_CONFIG    ethosu_u55_device_config
+#endif
 
 // The driver creates a semaphore per driver (NPU IRQ) and one per NPU variant
 // (driver reservation), so two for the single NPU used by each core.
@@ -70,6 +81,30 @@ static uint8_t OMV_ATTR_SEC_ALIGN(ETHOSU_CACHE_BUFFER[ETHOSU_CACHE_SIZE], ".bss.
 
 static struct ethosu_driver ethosu_driver;
 
+#if OMV_NPU_U85_ENABLE
+// The driver's default U85 config uses device (non-modifiable) transactions and 64
+// outstanding EXT reads, which exceeds the E4's cap. The AXI port of each region is
+// selected by address (see ethosu_config_select), the QCONFIG/REGIONCFG values are only
+// a fallback. All use normal (modifiable) transactions as Alif's ML evaluation kit does,
+// and the outstanding AXI transactions are set to the E4's CFG_SRAM_CAP and CFG_EXT_CAP.
+static struct u85_config_t ethosu_u85_config = {
+    .mem_attr[0] = { .axi_port = 0, .memtype = 2 }, // SRAM port, normal non-cacheable.
+    .mem_attr[1] = { .axi_port = 0, .memtype = 2 }, // SRAM port, normal non-cacheable.
+    .mem_attr[2] = { .axi_port = 1, .memtype = 2 }, // EXT port, normal non-cacheable.
+    .mem_attr[3] = { .axi_port = 1, .memtype = 2 }, // EXT port, normal non-cacheable.
+    .qconfig.cmd_region0 = 2,
+    .regioncfg = {
+        .region0 = 3, .region1 = 0, .region2 = 1, .region3 = 1,
+        .region4 = 1, .region5 = 1, .region6 = 1, .region7 = 1,
+    },
+    .axi_sram = { .max_outstanding_read_m1 = 15, .max_outstanding_write_m1 = 15, .max_beats = 2 },
+    .axi_ext = { .max_outstanding_read_m1 = 31, .max_outstanding_write_m1 = 31, .max_beats = 2 },
+};
+
+static struct ethosu_device_config ethosu_u85_device_config = {
+    .config = &ethosu_u85_config,
+};
+#else
 // The command stream and all regions use AXI_LIMIT0 or AXI_LIMIT1 (the M0 port), with
 // 128-byte bursts and normal (modifiable) non-cacheable transactions.
 static struct u55_config_t ethosu_u55_config = {
@@ -87,6 +122,7 @@ static struct u55_config_t ethosu_u55_config = {
 static struct ethosu_device_config ethosu_u55_device_config = {
     .config = &ethosu_u55_config,
 };
+#endif
 
 struct ethosu_semaphore_t {
     uint8_t count;
@@ -163,8 +199,20 @@ static uint64_t ethosu_address_remap(uint64_t address, int index) {
     return LocalToGlobal((void *) (uint32_t) address);
 }
 
+#if OMV_NPU_U85_ENABLE
+// Selects the U85 AXI port by address, as Alif's ML evaluation kit does: MRAM and the
+// OSPI flash (0x80000000 and up) are only reachable through the EXT port (MEM_ATTR2),
+// and the SRAMs and TCMs only through the SRAM ports (MEM_ATTR0). The address is global.
+static unsigned int ethosu_config_select(uint64_t address, int index) {
+    return (address >= 0x80000000) ? 2 : 0;
+}
+#endif
+
 static struct ethosu_device_user_ops ethosu_user_ops = {
     .address_remap = ethosu_address_remap,
+    #if OMV_NPU_U85_ENABLE
+    .config_select = ethosu_config_select,
+    #endif
 };
 
 void ethosu_inference_begin(struct ethosu_driver *drv, void *user_arg) {
@@ -188,8 +236,8 @@ void ETHOSU_IRQ_HANDLER(void) {
 int alif_npu_init(void) {
     // Initialize Ethos-U.
     if (ethosu_init_ex(&ethosu_driver,              /* Ethos-U driver device pointer */
-                       &ethosu_device_desc_u55,     /* Ethos-U device descriptor. */
-                       &ethosu_u55_device_config,   /* Ethos-U device config. */
+                       &ETHOSU_DEVICE_DESC,         /* Ethos-U device descriptor. */
+                       &ETHOSU_DEVICE_CONFIG,       /* Ethos-U device config. */
                        &ethosu_user_ops,            /* Ethos-U device user ops. */
                        ETHOSU_BASE_ADDRESS,         /* Ethos-U NPU's base address. */
                        ETHOSU_CACHE_BUFFER,         /* Pointer to fast mem area - NULL for U55. */
