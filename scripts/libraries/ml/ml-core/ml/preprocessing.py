@@ -37,11 +37,15 @@ class Normalization:
         mean=(0.0, 0.0, 0.0),
         stdev=(1.0, 1.0, 1.0),
         roi=None,
+        layout=None,
     ):
         self.scale = scale
         self.mean = mean
         self.stdev = stdev
         self.roi = roi
+        # Input tensor layout: "NHWC" (TFLite) or "NCHW" (most PyTorch models). If None,
+        # ml.Model uses the model's input layout, else NHWC is used.
+        self.layout = layout
         self._image = None
 
     def __call__(self, *args):
@@ -51,7 +55,7 @@ class Normalization:
                 raise ValueError("Expected an image input")
             if self.roi is None:
                 self.roi = (0, 0, img.width(), img.height())
-            n = Normalization(self.scale, self.mean, self.stdev, self.roi)
+            n = Normalization(self.scale, self.mean, self.stdev, self.roi, self.layout)
             n._image = img
             return n
 
@@ -59,24 +63,38 @@ class Normalization:
 
         # Create an image using the input tensor as buffer.
         if len(shape) != 4:
-            raise ValueError("Expected input tensor with shape: (1, H, W, C)")
-        b, h, w, c = shape
+            raise ValueError("Expected a 4D input tensor")
+        layout = self.layout or "NHWC"
+        if layout == "NCHW":
+            b, c, h, w = shape
+        else:
+            b, h, w, c = shape
         if b != 1:
             raise ValueError("Expected batches to be 1")
         if c != 1 and c != 3:
             raise ValueError("Expected channels to be 1 or 3")
 
         # Place the image buffer at the end of the input buffer so we can convert it in-place.
+        # 8-bit channels-first planes would overwrite pixels not yet converted, so these
+        # inputs are drawn into a separate image.
+        channels_first = layout == "NCHW" and c == 3
         pixfmt = image.GRAYSCALE if c == 1 else image.RGB565
-        offset = len(buffer) - (w * h * (1 if c == 1 else 2))
-        img = image.Image(w, h, pixfmt, buffer=memoryview(buffer)[offset:])
+        if channels_first and dtype != ord('f'):
+            img = image.Image(w, h, pixfmt)
+        else:
+            offset = len(buffer) - (w * h * (1 if c == 1 else 2))
+            img = image.Image(w, h, pixfmt, buffer=memoryview(buffer)[offset:])
 
         # Copy and scale (if needed) the input image to the input buffer.
         hints = image.BILINEAR | image.CENTER | image.SCALE_ASPECT_IGNORE | image.BLACK_BACKGROUND
         img.draw_image(self._image, 0, 0, roi=self.roi, hint=hints)
 
-        # Convert the image in-place into an ndarray input tensor.
-        array = img.to_ndarray(dtype, buffer=buffer)
+        # Convert the image in-place into an ndarray input tensor. Single channel
+        # inputs have the same memory layout either way.
+        if channels_first:
+            array = img.to_ndarray(dtype, buffer=buffer, channels_first=True)
+        else:
+            array = img.to_ndarray(dtype, buffer=buffer)
 
         # Normalize the input tensor.
         if dtype == ord('f'):
@@ -92,6 +110,9 @@ class Normalization:
             else:
                 fadd = (fadd - np.array(self.mean)) / np.array(self.stdev)
                 fscale = fscale / np.array(self.stdev)
+                if channels_first:
+                    fadd = fadd.reshape((3, 1, 1))
+                    fscale = fscale.reshape((3, 1, 1))
 
             # Apply normalization in-place (must be done in two steps for ulab).
             array *= fscale
