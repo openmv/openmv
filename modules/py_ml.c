@@ -31,6 +31,7 @@
  * Python Machine Learning Module.
  */
 #include <stdio.h>
+#include <string.h>
 #include "py/runtime.h"
 #include "py/obj.h"
 #include "py/objlist.h"
@@ -227,6 +228,13 @@ static mp_obj_t py_ml_process_output(py_ml_model_obj_t *model, bool deep_copy) {
 // TF Model Object.
 static const mp_obj_type_t py_ml_model_type;
 
+mp_obj_t py_ml_layout_obj(const char *layout) {
+    if (layout == NULL) {
+        return mp_const_none;
+    }
+    return MP_OBJ_NEW_QSTR(strcmp(layout, "NCHW") == 0 ? MP_QSTR_NCHW : MP_QSTR_NHWC);
+}
+
 static mp_obj_t py_ml_dtype_char_tuple(const mp_obj_tuple_t *dtype) {
     mp_obj_tuple_t *r = (mp_obj_tuple_t *) MP_OBJ_TO_PTR(mp_obj_new_tuple(dtype->len, NULL));
     for (size_t i = 0; i < dtype->len; i++) {
@@ -248,6 +256,8 @@ static void py_ml_model_print(const mp_print_t *print, mp_obj_t self_in, mp_prin
     mp_obj_print_helper(print, self->input_zero_point, kind);
     mp_printf(print, ", input_dtype: ");
     mp_obj_print_helper(print, py_ml_dtype_char_tuple(self->input_dtype), kind);
+    mp_printf(print, ", input_layout: ");
+    mp_obj_print_helper(print, self->input_layout, kind);
     mp_printf(print, ", output_shape: ");
     mp_obj_print_helper(print, self->output_shape, kind);
     mp_printf(print, ", output_scale: ");
@@ -309,6 +319,9 @@ static void py_ml_model_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest) {
                 break;
             case MP_QSTR_input_dtype:
                 dest[0] = py_ml_dtype_char_tuple(self->input_dtype);
+                break;
+            case MP_QSTR_input_layout:
+                dest[0] = MP_OBJ_FROM_PTR(self->input_layout);
                 break;
             case MP_QSTR_input_scale:
                 dest[0] = MP_OBJ_FROM_PTR(self->input_scale);
@@ -424,7 +437,17 @@ mp_obj_t py_ml_model_make_new(const mp_obj_type_t *type, size_t n_args, size_t n
         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Unsupported model format"));
     }
 
+    model->input_layout = NULL;
     model->backend->init_model(model);
+
+    // Backends that don't set the input layout use NHWC for 4D inputs.
+    if (model->input_layout == NULL) {
+        model->input_layout = (mp_obj_tuple_t *) MP_OBJ_TO_PTR(mp_obj_new_tuple(model->inputs_size, NULL));
+        for (size_t i = 0; i < model->inputs_size; i++) {
+            mp_obj_tuple_t *shape = MP_OBJ_TO_PTR(model->input_shape->items[i]);
+            model->input_layout->items[i] = py_ml_layout_obj((shape->len == 4) ? "NHWC" : NULL);
+        }
+    }
     return MP_OBJ_FROM_PTR(model);
 }
 

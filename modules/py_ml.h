@@ -47,6 +47,7 @@ typedef struct py_ml_model_obj {
     mp_obj_tuple_t *input_scale;
     mp_obj_tuple_t *input_zero_point;
     mp_obj_tuple_t *input_dtype;
+    mp_obj_tuple_t *input_layout; // "NHWC", "NCHW" or None (not 4D) per input.
     size_t outputs_size;
     mp_obj_tuple_t *output_shape;
     mp_obj_tuple_t *output_scale;
@@ -80,6 +81,10 @@ typedef struct ml_backend {
     // Return an output tensor by index.
     void *(*get_output) (py_ml_model_obj_t *model, size_t index);
 } ml_backend_t;
+
+// Returns the input layout object for a backend's layout string ("NHWC" or "NCHW", or NULL
+// for None). The QSTRs are created here, as the QSTRs of C++ backends are not extracted.
+mp_obj_t py_ml_layout_obj(const char *layout);
 
 #if MICROPY_PY_ML_TFLM
 extern const ml_backend_t ml_backend_tflm;
