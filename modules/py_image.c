@@ -489,10 +489,11 @@ static MP_DEFINE_CONST_FUN_OBJ_1(py_image_bytearray_obj, py_image_bytearray);
 
 #if defined(MODULE_ULAB_ENABLED) && (ULAB_MAX_DIMS == 4)
 static mp_obj_t py_image_to_ndarray(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
-    enum { ARG_dtype, ARG_buffer };
+    enum { ARG_dtype, ARG_buffer, ARG_channels_first };
     static const mp_arg_t allowed_args[] = {
         { MP_QSTR_dtype, MP_ARG_OBJ | MP_ARG_REQUIRED, {.u_rom_obj = MP_ROM_NONE } },
         { MP_QSTR_buffer, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
+        { MP_QSTR_channels_first, MP_ARG_BOOL | MP_ARG_KW_ONLY, {.u_bool = false} },
     };
 
     image_t *image = py_helper_arg_to_image(pos_args[0], ARG_IMAGE_ANY);
@@ -500,6 +501,7 @@ static mp_obj_t py_image_to_ndarray(size_t n_args, const mp_obj_t *pos_args, mp_
     mp_arg_parse_all(n_args - 1, pos_args + 1, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
     int len = image->w * image->h;
+    bool channels_first = args[ARG_channels_first].u_bool;
 
     int dtype_code;
     int dtype_size;
@@ -539,7 +541,11 @@ static mp_obj_t py_image_to_ndarray(size_t n_args, const mp_obj_t *pos_args, mp_
             break;
         }
         case PIXFORMAT_RGB565: {
-            memcpy(shape, (size_t []) {0, image->h, image->w, 3}, sizeof(shape));
+            if (channels_first) {
+                memcpy(shape, (size_t []) {0, 3, image->h, image->w}, sizeof(shape));
+            } else {
+                memcpy(shape, (size_t []) {0, image->h, image->w, 3}, sizeof(shape));
+            }
             channels = 3;
             ndim = 3;
             break;
@@ -603,7 +609,36 @@ static mp_obj_t py_image_to_ndarray(size_t n_args, const mp_obj_t *pos_args, mp_
         uint16_t *input_u16 = (uint16_t *) image->data;
         int i = 0, j = 0;
 
-        if (dtype_code == 'f') {
+        if (dtype_code == 'f' && channels_first) {
+            // Planar output: the R, G and B planes follow each other.
+            float *output_r = (float *) ndarray->array;
+            float *output_g = output_r + len;
+            float *output_b = output_g + len;
+
+            #if (__ARM_ARCH >= 8)
+            // r0 holds the even pixels and r1 the odd pixels of each vector.
+            v128_t offsets = vmul_n_u32(vidup_u32(0, 1), 2);
+            for (; i < (len & ~(UINT16_VECTOR_SIZE - 1)); i += UINT16_VECTOR_SIZE) {
+                vrgb_pixels_t pixels = vrgb_rgb565_to_pixels888(vldr_u16(input_u16 + i));
+                v2x_rows_t pixels_r = vcvt_u16_f32(vand_u32(pixels.r, vdup_u16(0xff)));
+                vstr_f32_scatter(output_r + i + 0, offsets, pixels_r.r0);
+                vstr_f32_scatter(output_r + i + 1, offsets, pixels_r.r1);
+                v2x_rows_t pixels_g = vcvt_u16_f32(vand_u32(pixels.g, vdup_u16(0xff)));
+                vstr_f32_scatter(output_g + i + 0, offsets, pixels_g.r0);
+                vstr_f32_scatter(output_g + i + 1, offsets, pixels_g.r1);
+                v2x_rows_t pixels_b = vcvt_u16_f32(vand_u32(pixels.b, vdup_u16(0xff)));
+                vstr_f32_scatter(output_b + i + 0, offsets, pixels_b.r0);
+                vstr_f32_scatter(output_b + i + 1, offsets, pixels_b.r1);
+            }
+            #endif // __ARM_ARCH >= 8
+
+            for (; i < len; i++) {
+                int pixel = input_u16[i];
+                output_r[i] = COLOR_RGB565_TO_R8(pixel);
+                output_g[i] = COLOR_RGB565_TO_G8(pixel);
+                output_b[i] = COLOR_RGB565_TO_B8(pixel);
+            }
+        } else if (dtype_code == 'f') {
             float *output_f32 = (float *) ndarray->array;
 
             #if FLOAT32_VECTOR_SIZE > 1
@@ -627,6 +662,19 @@ static mp_obj_t py_image_to_ndarray(size_t n_args, const mp_obj_t *pos_args, mp_
                 output_f32[j + 0] = COLOR_RGB565_TO_R8(pixel);
                 output_f32[j + 1] = COLOR_RGB565_TO_G8(pixel);
                 output_f32[j + 2] = COLOR_RGB565_TO_B8(pixel);
+            }
+        } else if (channels_first) {
+            // Planar 8-bit output. Signed outputs are offset by 128.
+            uint8_t *output_r = (uint8_t *) ndarray->array;
+            uint8_t *output_g = output_r + len;
+            uint8_t *output_b = output_g + len;
+            uint8_t offset = (dtype_code == 'b') ? 0x80 : 0;
+
+            for (; i < len; i++) {
+                int pixel = input_u16[i];
+                output_r[i] = COLOR_RGB565_TO_R8(pixel) ^ offset;
+                output_g[i] = COLOR_RGB565_TO_G8(pixel) ^ offset;
+                output_b[i] = COLOR_RGB565_TO_B8(pixel) ^ offset;
             }
         } else {
             uint8_t *output_u8 = (uint8_t *) ndarray->array;
