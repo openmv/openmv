@@ -79,6 +79,31 @@
     },
     {
       "type": "data",
+      "path": "{TOP}/lib/models/torch_layout_m55.pte",
+      "alignment": 32
+    },
+    {
+      "type": "data",
+      "path": "{TOP}/lib/models/torch_yolov8n_m55.pte",
+      "alignment": 32
+    },
+    {
+      "type": "data",
+      "path": "{TOP}/lib/models/torch_yolov8n_u55.pte",
+      "alignment": 32
+    },
+    {
+      "type": "data",
+      "path": "{TOP}/lib/models/torch_multi_io_m55.pte",
+      "alignment": 32
+    },
+    {
+      "type": "data",
+      "path": "{TOP}/lib/models/torch_multi_io_u55.pte",
+      "alignment": 32
+    },
+    {
+      "type": "data",
       "path": "{TOP}/scripts/unittest/data/*"
     }
     ]
