@@ -64,6 +64,21 @@
     },
     {
       "type": "data",
+      "path": "{TOP}/lib/models/torch_classifier_m55.pte",
+      "alignment": 32
+    },
+    {
+      "type": "data",
+      "path": "{TOP}/lib/models/torch_detector_m55.pte",
+      "alignment": 32
+    },
+    {
+      "type": "data",
+      "path": "{TOP}/lib/models/torch_classifier_u55.pte",
+      "alignment": 32
+    },
+    {
+      "type": "data",
       "path": "{TOP}/scripts/unittest/data/*"
     }
     ]
