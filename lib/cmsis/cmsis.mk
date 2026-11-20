@@ -38,8 +38,15 @@ CMSIS_SRC_C += $(addprefix cmsis/src/dsp/,\
 	FastMathFunctions/FastMathFunctionsF16.c \
 )
 
+# CMSIS-NN, used by the ML backends. The float kernels are not used.
+ifneq ($(filter 1,$(MICROPY_PY_ML_TFLM) $(MICROPY_PY_ML_TORCH)),)
+CMSIS_SRC_C += $(filter-out %_f16.c %_f32.c %/arm_nntables_flt.c, \
+	$(patsubst $(TOP_DIR)/lib/%,%,$(wildcard $(TOP_DIR)/lib/cmsis/src/nn/Source/*/*.c)))
+endif
+
 HAL_CFLAGS += -I$(TOP_DIR)/lib/cmsis/include
 HAL_CFLAGS += -I$(TOP_DIR)/lib/cmsis/include/$(CMSIS_INC)
+HAL_CFLAGS += -I$(TOP_DIR)/lib/cmsis/src/nn/Include
 
 OMV_FIRM_OBJ += $(addprefix $(BUILD)/lib/, $(CMSIS_SRC_S:.s=.o))
 OMV_FIRM_OBJ += $(addprefix $(BUILD)/lib/, $(CMSIS_SRC_C:.c=.o))

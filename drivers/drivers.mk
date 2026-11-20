@@ -96,6 +96,22 @@ CFLAGS += -I$(TOP_DIR)/drivers/dave2d/include
 $(BUILD)/drivers/dave2d/src/%.o: override CFLAGS += -Wno-unused-value
 endif   # D/AVE 2D / Alif port.
 
+# Ethos-U NPU core driver sources (all NPU variants, ETHOSU_MULTI_VARIANT).
+ifneq ($(filter -DETHOS_U,$(CFLAGS)),)
+DRIVER_SRC_C += $(addprefix ethosu/src/, \
+    ethosu_driver.c \
+    ethosu_pmu.c \
+    ethosu_backend_u55.c \
+    ethosu_backend_u65.c \
+    ethosu_backend_u85.c \
+    ethosu_pmu_u55.c \
+    ethosu_pmu_u65.c \
+    ethosu_pmu_u85.c \
+)
+
+CFLAGS += -I$(TOP_DIR)/drivers/ethosu/include
+endif   # ETHOS_U
+
 # Display driver sources
 ifeq ($(MICROPY_PY_DISPLAY), 1)
 DRIVER_SRC_C += $(addprefix display/src/, \
