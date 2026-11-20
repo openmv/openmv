@@ -124,6 +124,11 @@ typedef struct __attribute__((packed)) framebuffer_header {
 
 void framebuffer_init0();
 
+#if OMV_OS_UNIX
+// Returns the streaming region, including space for framebuffer_header_t.
+void *framebuffer_get_stream_buffer(size_t *size);
+#endif
+
 // Initializes a frame buffer instance.
 void framebuffer_init(framebuffer_t *fb, void *buff, size_t size, bool dynamic, bool enabled);
 

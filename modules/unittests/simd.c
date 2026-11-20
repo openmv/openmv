@@ -828,6 +828,49 @@ static mp_obj_t test_simd_vhadd(void) {
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(test_simd_vhadd_obj, test_simd_vhadd);
 
+#if OMV_OS_UNIX
+static mp_obj_t test_simd_vhadd_boundaries(void) {
+    static const uint8_t unsigned8[][3] = {
+        {0, 0, 0}, {255, 255, 255}, {255, 0, 127}, {1, 0, 0},
+    };
+    static const int8_t signed8[][3] = {
+        {-128, -128, -128}, {127, 127, 127}, {-128, 127, -1}, {-1, 0, -1},
+    };
+    static const uint16_t unsigned16[][3] = {
+        {0, 0, 0}, {65535, 65535, 65535}, {65535, 0, 32767}, {1, 0, 0},
+    };
+    static const int16_t signed16[][3] = {
+        {-32768, -32768, -32768}, {32767, 32767, 32767}, {-32768, 32767, -1}, {-1, 0, -1},
+    };
+    for (size_t i = 0; i < MP_ARRAY_SIZE(unsigned8); i++) {
+        v128_t r = vhadd_u8(vdup_u8(unsigned8[i][0]), vdup_u8(unsigned8[i][1]));
+        if (vget_u8(r, 0) != unsigned8[i][2]) {
+            return mp_const_false;
+        }
+    }
+    for (size_t i = 0; i < MP_ARRAY_SIZE(signed8); i++) {
+        v128_t r = vhadd_s8(vdup_s8(signed8[i][0]), vdup_s8(signed8[i][1]));
+        if (vget_s8(r, 0) != signed8[i][2]) {
+            return mp_const_false;
+        }
+    }
+    for (size_t i = 0; i < MP_ARRAY_SIZE(unsigned16); i++) {
+        v128_t r = vhadd_u16(vdup_u16(unsigned16[i][0]), vdup_u16(unsigned16[i][1]));
+        if (vget_u16(r, 0) != unsigned16[i][2]) {
+            return mp_const_false;
+        }
+    }
+    for (size_t i = 0; i < MP_ARRAY_SIZE(signed16); i++) {
+        v128_t r = vhadd_s16(vdup_s16(signed16[i][0]), vdup_s16(signed16[i][1]));
+        if (vget_s16(r, 0) != signed16[i][2]) {
+            return mp_const_false;
+        }
+    }
+    return mp_const_true;
+}
+static MP_DEFINE_CONST_FUN_OBJ_0(test_simd_vhadd_boundaries_obj, test_simd_vhadd_boundaries);
+#endif
+
 // Test pack operations
 static mp_obj_t test_simd_vpkhbt_vpkhtb(void) {
     // vpkhbt: pack half-word bottom-top
@@ -2028,6 +2071,51 @@ static mp_obj_t test_simd_misc(void) {
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(test_simd_misc_obj, test_simd_misc);
 
+#if OMV_OS_UNIX
+static mp_obj_t test_simd_host_dual_multiply(void) {
+    static const struct {
+        uint32_t a, b, acc, product, sum;
+    } cases[] = {
+        {0x80008000, 0x80008000, 0x80000000, 0x80000000, 0},
+        {0x0001FFFF, 0x00030002, 0x7FFFFFFF, 1, 0x80000000},
+        {0x7FFF7FFF, 0x7FFF7FFF, 0, 0x7FFE0002, 0x7FFE0002},
+        {0x80007FFF, 0x7FFF8000, 0, 0x80010000, 0x80010000},
+        {0x0001FFFF, 0xFFFF0001, 2, 0xFFFFFFFE, 0},
+    };
+    for (size_t i = 0; i < MP_ARRAY_SIZE(cases); i++) {
+        volatile uint32_t a = cases[i].a;
+        volatile uint32_t b = cases[i].b;
+        volatile uint32_t acc = cases[i].acc;
+        if (__SMUAD(a, b) != cases[i].product || __SMLAD(a, b, acc) != cases[i].sum) {
+            return mp_const_false;
+        }
+    }
+    return mp_const_true;
+}
+static MP_DEFINE_CONST_FUN_OBJ_0(test_simd_host_dual_multiply_obj, test_simd_host_dual_multiply);
+static mp_obj_t test_simd_host_packed_saturation(void) {
+    volatile int32_t mixed = (int32_t) 0x7FFF8000;
+    volatile int32_t negative = (int32_t) 0xFFFF0001;
+    volatile int32_t limits = (int32_t) 0x80007FFF;
+    if ((uint32_t) __SSAT16(mixed, 8) != 0x007FFF80 ||
+        (uint32_t) __SSAT16(negative, 1) != 0xFFFF0000 ||
+        (uint32_t) __SSAT16(limits, 16) != 0x80007FFF ||
+        __USAT16(mixed, 8) != 0x00FF0000 ||
+        __USAT16(negative, 0) != 0 ||
+        __USAT16(limits, 15) != 0x00007FFF) {
+        return mp_const_false;
+    }
+    volatile uint32_t a = 0xFF00FF00;
+    volatile uint32_t b = 0x00FF00FF;
+    if (__USAD8(a, b) != 1020 || __USAD8(b, a) != 1020 ||
+        __USADA8(a, b, UINT32_MAX) != 1019) {
+        return mp_const_false;
+    }
+    return mp_const_true;
+}
+static MP_DEFINE_CONST_FUN_OBJ_0(test_simd_host_packed_saturation_obj, test_simd_host_packed_saturation);
+#endif
+
 // Module definition
 static const mp_rom_map_elem_t unittest_simd_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR___name__), MP_ROM_QSTR(MP_QSTR_unittest_simd) },
@@ -2044,6 +2132,9 @@ static const mp_rom_map_elem_t unittest_simd_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_test_simd_vsli_vsri), MP_ROM_PTR(&test_simd_vsli_vsri_obj) },
     { MP_ROM_QSTR(MP_QSTR_test_simd_vshl), MP_ROM_PTR(&test_simd_vshl_obj) },
     { MP_ROM_QSTR(MP_QSTR_test_simd_vhadd), MP_ROM_PTR(&test_simd_vhadd_obj) },
+    #if OMV_OS_UNIX
+    { MP_ROM_QSTR(MP_QSTR_test_simd_vhadd_boundaries), MP_ROM_PTR(&test_simd_vhadd_boundaries_obj) },
+    #endif
     { MP_ROM_QSTR(MP_QSTR_test_simd_vpkhbt_vpkhtb), MP_ROM_PTR(&test_simd_vpkhbt_vpkhtb_obj) },
     { MP_ROM_QSTR(MP_QSTR_test_simd_vuxtb_vsxtb), MP_ROM_PTR(&test_simd_vuxtb_vsxtb_obj) },
     { MP_ROM_QSTR(MP_QSTR_test_simd_vmov_narrow), MP_ROM_PTR(&test_simd_vmov_narrow_obj) },
@@ -2062,6 +2153,10 @@ static const mp_rom_map_elem_t unittest_simd_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_test_simd_vld2_vst2_len), MP_ROM_PTR(&test_simd_vld2_vst2_len_obj) },
     { MP_ROM_QSTR(MP_QSTR_test_simd_rgb_store), MP_ROM_PTR(&test_simd_rgb_store_obj) },
     { MP_ROM_QSTR(MP_QSTR_test_simd_misc), MP_ROM_PTR(&test_simd_misc_obj) },
+    #if OMV_OS_UNIX
+    { MP_ROM_QSTR(MP_QSTR_test_simd_host_dual_multiply), MP_ROM_PTR(&test_simd_host_dual_multiply_obj) },
+    { MP_ROM_QSTR(MP_QSTR_test_simd_host_packed_saturation), MP_ROM_PTR(&test_simd_host_packed_saturation_obj) },
+    #endif
 };
 
 static MP_DEFINE_CONST_DICT(unittest_simd_module_globals, unittest_simd_module_globals_table);
