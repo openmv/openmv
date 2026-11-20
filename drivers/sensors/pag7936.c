@@ -651,8 +651,12 @@ static int suspend(omv_csi_t *csi) {
 
 static int sleep(omv_csi_t *csi, int enable) {
     int ret = omv_i2c_write_reg(csi->i2c, csi->slv_addr, SENSOR_TG_EN, 2, SENSOR_TG_EN_FLAG, 1);
-    ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, SENSOR_OPMODE, 2,
-                             enable ? SENSOR_OPMODE_SUSPEND : SENSOR_OPMODE_RUN, 1);
+    if (enable) {
+        // Don't return until the sensor has stopped, the caller may stop its clock next.
+        ret |= suspend(csi);
+    } else {
+        ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, SENSOR_OPMODE, 2, SENSOR_OPMODE_RUN, 1);
+    }
     return ret;
 }
 
