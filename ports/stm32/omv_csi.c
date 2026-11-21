@@ -746,7 +746,10 @@ static int stm_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
         }
 
         if ((mp_hal_ticks_ms() - start) > OMV_CSI_TIMEOUT_MS) {
-            omv_csi_abort(csi, true, false);
+            // Stay ready for the next frame in trigger in mode, a timeout just means no trigger.
+            if (csi->trigger_mode != OMV_CSI_TRIGGER_IN) {
+                omv_csi_abort(csi, true, false);
+            }
             return OMV_CSI_ERROR_CAPTURE_TIMEOUT;
         }
     }

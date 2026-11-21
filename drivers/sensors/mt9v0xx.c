@@ -500,11 +500,19 @@ static int ioctl(omv_csi_t *csi, int request, void *arg) {
         }
         case OMV_CSI_IOCTL_SET_TRIGGERED_MODE: {
             int enable = a->ivalue;
+
+            if (enable < OMV_CSI_TRIGGER_OFF || enable > OMV_CSI_TRIGGER_OUT) {
+                return -1;
+            }
+
             ret = omv_i2c_read_reg(csi->i2c, csi->slv_addr, MT9V0XX_CHIP_CONTROL, 1, &chip_control, 2);
             ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, MT9V0XX_CHIP_CONTROL, 1,
                                      (chip_control & (~MT9V0XX_CHIP_CONTROL_MODE_MASK))
                                      | ((enable != 0) ? MT9V0XX_CHIP_CONTROL_SNAP_MODE : MT9V0XX_CHIP_CONTROL_MASTER_MODE), 2);
             ret |= update_shadow_registers(csi);
+            if (ret >= 0) {
+                omv_csi_set_trigger_mode(csi, enable);
+            }
             break;
         }
         case OMV_CSI_IOCTL_GET_TRIGGERED_MODE: {
