@@ -26,3 +26,6 @@
 [submodule "drivers/ethosu"]
 	path = drivers/ethosu
 	url = https://github.com/openmv/ethos-u-core-driver.git
+[submodule "lib/torch/libtorch"]
+	path = lib/torch/libtorch
+	url = https://github.com/openmv/libtorch.git

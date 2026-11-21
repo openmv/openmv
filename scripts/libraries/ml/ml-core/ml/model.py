@@ -41,5 +41,15 @@ class Model(uml.Model):
             self.labels = None
 
     def predict(self, args, **kwargs):
-        args = [Normalization()(x) if isinstance(x, image.Image) else x for x in args]
-        return super().predict(args, **kwargs)
+        # Images are normalized into the input tensor, in the model's input layout
+        # unless the Normalization sets one.
+        # The number of inputs is checked by the model.
+        inputs = []
+        for i, x in enumerate(args):
+            layout = self.input_layout[i] if i < len(self.input_layout) else None
+            if isinstance(x, image.Image):
+                x = Normalization()(x)
+            if isinstance(x, Normalization) and x.layout is None:
+                x.layout = layout
+            inputs.append(x)
+        return super().predict(inputs, **kwargs)

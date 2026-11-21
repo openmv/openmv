@@ -10,6 +10,26 @@
     },
     {
       "type": "data",
+      "path": "{TOP}/lib/models/torch_classifier_m7.pte",
+      "alignment": 32
+    },
+    {
+      "type": "data",
+      "path": "{TOP}/lib/models/torch_detector_m7.pte",
+      "alignment": 32
+    },
+    {
+      "type": "data",
+      "path": "{TOP}/lib/models/torch_layout_m7.pte",
+      "alignment": 32
+    },
+    {
+      "type": "data",
+      "path": "{TOP}/lib/models/torch_multi_io_m7.pte",
+      "alignment": 32
+    },
+    {
+      "type": "data",
       "path": "{TOP}/scripts/unittest/data/*"
     }
     ]
