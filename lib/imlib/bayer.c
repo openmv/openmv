@@ -331,11 +331,6 @@ static inline v2x_row_ptrs_t vdebayer_quarter_rowptrs_init(const image_t *src, i
     return rowptrs;
 }
 
-static inline v128_predicate_t vdebayer_load_pred(const image_t *src, int32_t x) {
-    // Load 1x to 4x 32-bit rows overlapping by 2 pixels.
-    return vpredicate_8(src->w - x + (VBAYER_X_STRIDE - 2));
-}
-
 static inline v128_predicate_t vdebayer_store_pred(int32_t width, int32_t x) {
     // For 2x to 8x 16-bit lanes.
     return vpredicate_16(width - x);
@@ -344,15 +339,21 @@ static inline v128_predicate_t vdebayer_store_pred(int32_t width, int32_t x) {
 // Loads pixels from the image into the 4 row vectors and handles the boundary conditions.
 // Note that the loaded pixels are shifted to the right by 1 to account for the offset
 // created by debayering the image.
-static v4x_rows_t vdebayer_load_rows_inner(v4x_row_ptrs_t rowptrs, uint32_t x, v128_t offsets, v128_predicate_t pred) {
+static v4x_rows_t vdebayer_load_rows_inner(v4x_row_ptrs_t rowptrs, uint32_t x, v128_t offsets, int32_t n) {
     bool x_is_0 = (x == 0);
+    v128_predicate_t pred;
 
-    // Start loading 1 pixel behind the x position and load 1 extra pixel.
     if (!x_is_0) {
-        pred = vpredicate_8_add(pred, 1);
+        // Byte offset of the lane holding the last pixel in the row: lane (n - 1) / 2, 4 bytes each.
+        int32_t lane_bytes = (n - 1) / 2 * 4;
+        // Bytes of that lane to load: 2 if only its first output pixel is still in the row, 3 if
+        // both are, so the load always ends on the byte right after the last pixel.
+        int32_t load_bytes = n & 1 ? 2 : 3;
+        pred = vpredicate_8(lane_bytes + load_bytes);
     } else {
         // Pointers are shifted back by 1 already so this undoes that shift.
         x += 1;
+        pred = vpredicate_8(n + VBAYER_X_STRIDE - 2);
     }
 
     v4x_rows_t rows = vldr_u32_gather_pred_x4_unaligned(rowptrs, x, offsets, pred);
@@ -377,10 +378,10 @@ static v4x_rows_t vdebayer_load_rows_inner(v4x_row_ptrs_t rowptrs, uint32_t x, v
             break;
         case 3:
             // MSB [0, G1, R0, G0] LSB -> MSB [R0, G1, R0, G0] LSB
-            rows.r0 = vset_u8(rows.r0, 3, vget_u8(rows.r0, 2));
-            rows.r1 = vset_u8(rows.r1, 3, vget_u8(rows.r1, 2));
-            rows.r2 = vset_u8(rows.r2, 3, vget_u8(rows.r2, 2));
-            rows.r3 = vset_u8(rows.r3, 3, vget_u8(rows.r3, 2));
+            rows.r0 = vset_u8(rows.r0, 3, vget_u8(rows.r0, 1));
+            rows.r1 = vset_u8(rows.r1, 3, vget_u8(rows.r1, 1));
+            rows.r2 = vset_u8(rows.r2, 3, vget_u8(rows.r2, 1));
+            rows.r3 = vset_u8(rows.r3, 3, vget_u8(rows.r3, 1));
             break;
         #if UINT8_VECTOR_SIZE >= 8
         case 5:
@@ -473,10 +474,9 @@ static v4x_rows_t vdebayer_load_rows_inner(v4x_row_ptrs_t rowptrs, uint32_t x, v
 }
 
 static inline v4x_rows_t vdebayer_load_rows(const image_t *src, v4x_row_ptrs_t rowptrs, uint32_t x, v128_t offsets) {
-    v128_predicate_t pred = vdebayer_load_pred(src, x);
-
-    // For the vast majority of cases we load vector size pixels at a time and exit quickly.
-    if ((x != 0) && vpredicate_8_all_lanes_active(pred)) {
+    // For the vast majority of cases we load vector size pixels at a time and exit quickly. That
+    // needs the pixel before x, the pixels of this chunk and the pixel after them all in the row.
+    if (x != 0 && src->w - x >= VBAYER_X_STRIDE + 2) {
         // Start loading 1 pixel behind the x position and load 1 extra pixel.
         v4x_rows_t rows;
         rows.r0 = vldr_u32_gather_unaligned(rowptrs.p0.u8 + x, offsets);
@@ -485,7 +485,7 @@ static inline v4x_rows_t vdebayer_load_rows(const image_t *src, v4x_row_ptrs_t r
         rows.r3 = vldr_u32_gather_unaligned(rowptrs.p3.u8 + x, offsets);
         return rows;
     } else {
-        return vdebayer_load_rows_inner(rowptrs, x, offsets, pred);
+        return vdebayer_load_rows_inner(rowptrs, x, offsets, src->w - x);
     }
 }
 
@@ -1388,7 +1388,7 @@ static void vdebayer_bggr_to_grayscale_awb(image_t *src, image_t *dst, image_t *
         uint8_t *p0 = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(buf, (y % VBAYER_BUF_BROWS));
         uint8_t *p1 = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(buf, ((y + 1) % VBAYER_BUF_BROWS));
 
-        v4x_rows_t rows = vdebayer_load_rows_inner(rowptrs, 0, offsets, vdebayer_load_pred(src, 0));
+        v4x_rows_t rows = vdebayer_load_rows_inner(rowptrs, 0, offsets, src->w);
         v128_predicate_t pred = vdebayer_store_pred(src->w, 0);
 
         vrgb_pixels_t pixels0 = vdebayer_bggr(rows.r0, rows.r1, rows.r2);
@@ -1415,7 +1415,7 @@ static void vdebayer_bggr_to_grayscale_awb(image_t *src, image_t *dst, image_t *
         }
 
         if (x < src->w) {
-            v4x_rows_t rows = vdebayer_load_rows_inner(rowptrs, x, offsets, vdebayer_load_pred(src, x));
+            v4x_rows_t rows = vdebayer_load_rows_inner(rowptrs, x, offsets, src->w - x);
             v128_predicate_t pred = vdebayer_store_pred(src->w, x);
 
             vrgb_pixels_t pixels0 = vdebayer_bggr(rows.r0, rows.r1, rows.r2);
@@ -1435,7 +1435,7 @@ static void vdebayer_bggr_to_grayscale_awb(image_t *src, image_t *dst, image_t *
         v4x_row_ptrs_t rowptrs = vdebayer_rowptrs_init(src, y);
         uint8_t *p0 = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(buf, (y % VBAYER_BUF_BROWS));
 
-        v4x_rows_t rows = vdebayer_load_rows_inner(rowptrs, 0, offsets, vdebayer_load_pred(src, 0));
+        v4x_rows_t rows = vdebayer_load_rows_inner(rowptrs, 0, offsets, src->w);
         v128_predicate_t pred = vdebayer_store_pred(src->w, 0);
 
         vrgb_pixels_t pixels0 = vdebayer_bggr(rows.r0, rows.r1, rows.r2);
@@ -1454,7 +1454,7 @@ static void vdebayer_bggr_to_grayscale_awb(image_t *src, image_t *dst, image_t *
         }
 
         if (x < src->w) {
-            v4x_rows_t rows = vdebayer_load_rows_inner(rowptrs, x, offsets, vdebayer_load_pred(src, x));
+            v4x_rows_t rows = vdebayer_load_rows_inner(rowptrs, x, offsets, src->w - x);
             v128_predicate_t pred = vdebayer_store_pred(src->w, x);
 
             vrgb_pixels_t pixels0 = vdebayer_bggr(rows.r0, rows.r1, rows.r2);
@@ -1476,7 +1476,7 @@ static void vdebayer_gbrg_to_grayscale_awb(image_t *src, image_t *dst, image_t *
         uint8_t *p0 = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(buf, (y % VBAYER_BUF_BROWS));
         uint8_t *p1 = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(buf, ((y + 1) % VBAYER_BUF_BROWS));
 
-        v4x_rows_t rows = vdebayer_load_rows_inner(rowptrs, 0, offsets, vdebayer_load_pred(src, 0));
+        v4x_rows_t rows = vdebayer_load_rows_inner(rowptrs, 0, offsets, src->w);
         v128_predicate_t pred = vdebayer_store_pred(src->w, 0);
 
         vrgb_pixels_t pixels0 = vdebayer_gbrg(rows.r0, rows.r1, rows.r2);
@@ -1503,7 +1503,7 @@ static void vdebayer_gbrg_to_grayscale_awb(image_t *src, image_t *dst, image_t *
         }
 
         if (x < src->w) {
-            v4x_rows_t rows = vdebayer_load_rows_inner(rowptrs, x, offsets, vdebayer_load_pred(src, x));
+            v4x_rows_t rows = vdebayer_load_rows_inner(rowptrs, x, offsets, src->w - x);
             v128_predicate_t pred = vdebayer_store_pred(src->w, x);
 
             vrgb_pixels_t pixels0 = vdebayer_gbrg(rows.r0, rows.r1, rows.r2);
@@ -1523,7 +1523,7 @@ static void vdebayer_gbrg_to_grayscale_awb(image_t *src, image_t *dst, image_t *
         v4x_row_ptrs_t rowptrs = vdebayer_rowptrs_init(src, y);
         uint8_t *p0 = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(buf, (y % VBAYER_BUF_BROWS));
 
-        v4x_rows_t rows = vdebayer_load_rows_inner(rowptrs, 0, offsets, vdebayer_load_pred(src, 0));
+        v4x_rows_t rows = vdebayer_load_rows_inner(rowptrs, 0, offsets, src->w);
         v128_predicate_t pred = vdebayer_store_pred(src->w, 0);
 
         vrgb_pixels_t pixels0 = vdebayer_gbrg(rows.r0, rows.r1, rows.r2);
@@ -1541,7 +1541,7 @@ static void vdebayer_gbrg_to_grayscale_awb(image_t *src, image_t *dst, image_t *
         }
 
         if (x < src->w) {
-            v4x_rows_t rows = vdebayer_load_rows_inner(rowptrs, x, offsets, vdebayer_load_pred(src, x));
+            v4x_rows_t rows = vdebayer_load_rows_inner(rowptrs, x, offsets, src->w - x);
             v128_predicate_t pred = vdebayer_store_pred(src->w, x);
 
             vrgb_pixels_t pixels0 = vdebayer_gbrg(rows.r0, rows.r1, rows.r2);
@@ -1562,7 +1562,7 @@ static void vdebayer_grbg_to_grayscale_awb(image_t *src, image_t *dst, image_t *
         uint8_t *p0 = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(buf, (y % VBAYER_BUF_BROWS));
         uint8_t *p1 = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(buf, ((y + 1) % VBAYER_BUF_BROWS));
 
-        v4x_rows_t rows = vdebayer_load_rows_inner(rowptrs, 0, offsets, vdebayer_load_pred(src, 0));
+        v4x_rows_t rows = vdebayer_load_rows_inner(rowptrs, 0, offsets, src->w);
         v128_predicate_t pred = vdebayer_store_pred(src->w, 0);
 
         vrgb_pixels_t pixels0 = vdebayer_grbg(rows.r0, rows.r1, rows.r2);
@@ -1589,7 +1589,7 @@ static void vdebayer_grbg_to_grayscale_awb(image_t *src, image_t *dst, image_t *
         }
 
         if (x < src->w) {
-            v4x_rows_t rows = vdebayer_load_rows_inner(rowptrs, x, offsets, vdebayer_load_pred(src, x));
+            v4x_rows_t rows = vdebayer_load_rows_inner(rowptrs, x, offsets, src->w - x);
             v128_predicate_t pred = vdebayer_store_pred(src->w, x);
 
             vrgb_pixels_t pixels0 = vdebayer_grbg(rows.r0, rows.r1, rows.r2);
@@ -1609,7 +1609,7 @@ static void vdebayer_grbg_to_grayscale_awb(image_t *src, image_t *dst, image_t *
         v4x_row_ptrs_t rowptrs = vdebayer_rowptrs_init(src, y);
         uint8_t *p0 = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(buf, (y % VBAYER_BUF_BROWS));
 
-        v4x_rows_t rows = vdebayer_load_rows_inner(rowptrs, 0, offsets, vdebayer_load_pred(src, 0));
+        v4x_rows_t rows = vdebayer_load_rows_inner(rowptrs, 0, offsets, src->w);
         v128_predicate_t pred = vdebayer_store_pred(src->w, 0);
 
         vrgb_pixels_t pixels0 = vdebayer_grbg(rows.r0, rows.r1, rows.r2);
@@ -1627,7 +1627,7 @@ static void vdebayer_grbg_to_grayscale_awb(image_t *src, image_t *dst, image_t *
         }
 
         if (x < src->w) {
-            v4x_rows_t rows = vdebayer_load_rows_inner(rowptrs, x, offsets, vdebayer_load_pred(src, x));
+            v4x_rows_t rows = vdebayer_load_rows_inner(rowptrs, x, offsets, src->w - x);
             v128_predicate_t pred = vdebayer_store_pred(src->w, x);
 
             vrgb_pixels_t pixels0 = vdebayer_grbg(rows.r0, rows.r1, rows.r2);
@@ -1648,7 +1648,7 @@ static void vdebayer_rggb_to_grayscale_awb(image_t *src, image_t *dst, image_t *
         uint8_t *p0 = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(buf, (y % VBAYER_BUF_BROWS));
         uint8_t *p1 = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(buf, ((y + 1) % VBAYER_BUF_BROWS));
 
-        v4x_rows_t rows = vdebayer_load_rows_inner(rowptrs, 0, offsets, vdebayer_load_pred(src, 0));
+        v4x_rows_t rows = vdebayer_load_rows_inner(rowptrs, 0, offsets, src->w);
         v128_predicate_t pred = vdebayer_store_pred(src->w, 0);
 
         vrgb_pixels_t pixels0 = vdebayer_rggb(rows.r0, rows.r1, rows.r2);
@@ -1675,7 +1675,7 @@ static void vdebayer_rggb_to_grayscale_awb(image_t *src, image_t *dst, image_t *
         }
 
         if (x < src->w) {
-            v4x_rows_t rows = vdebayer_load_rows_inner(rowptrs, x, offsets, vdebayer_load_pred(src, x));
+            v4x_rows_t rows = vdebayer_load_rows_inner(rowptrs, x, offsets, src->w - x);
             v128_predicate_t pred = vdebayer_store_pred(src->w, x);
 
             vrgb_pixels_t pixels0 = vdebayer_rggb(rows.r0, rows.r1, rows.r2);
@@ -1695,7 +1695,7 @@ static void vdebayer_rggb_to_grayscale_awb(image_t *src, image_t *dst, image_t *
         v4x_row_ptrs_t rowptrs = vdebayer_rowptrs_init(src, y);
         uint8_t *p0 = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(buf, (y % VBAYER_BUF_BROWS));
 
-        v4x_rows_t rows = vdebayer_load_rows_inner(rowptrs, 0, offsets, vdebayer_load_pred(src, 0));
+        v4x_rows_t rows = vdebayer_load_rows_inner(rowptrs, 0, offsets, src->w);
         v128_predicate_t pred = vdebayer_store_pred(src->w, 0);
 
         vrgb_pixels_t pixels0 = vdebayer_rggb(rows.r0, rows.r1, rows.r2);
@@ -1713,7 +1713,7 @@ static void vdebayer_rggb_to_grayscale_awb(image_t *src, image_t *dst, image_t *
         }
 
         if (x < src->w) {
-            v4x_rows_t rows = vdebayer_load_rows_inner(rowptrs, x, offsets, vdebayer_load_pred(src, x));
+            v4x_rows_t rows = vdebayer_load_rows_inner(rowptrs, x, offsets, src->w - x);
             v128_predicate_t pred = vdebayer_store_pred(src->w, x);
 
             vrgb_pixels_t pixels0 = vdebayer_rggb(rows.r0, rows.r1, rows.r2);
@@ -1734,7 +1734,7 @@ static void vdebayer_bggr_to_rgb565_awb(image_t *src, image_t *dst, image_t *buf
         uint16_t *p0 = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(buf, (y % VBAYER_BUF_BROWS));
         uint16_t *p1 = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(buf, ((y + 1) % VBAYER_BUF_BROWS));
 
-        v4x_rows_t rows = vdebayer_load_rows_inner(rowptrs, 0, offsets, vdebayer_load_pred(src, 0));
+        v4x_rows_t rows = vdebayer_load_rows_inner(rowptrs, 0, offsets, src->w);
         v128_predicate_t pred = vdebayer_store_pred(src->w, 0);
 
         vrgb_pixels_t pixels0 = vdebayer_bggr(rows.r0, rows.r1, rows.r2);
@@ -1761,7 +1761,7 @@ static void vdebayer_bggr_to_rgb565_awb(image_t *src, image_t *dst, image_t *buf
         }
 
         if (x < src->w) {
-            v4x_rows_t rows = vdebayer_load_rows_inner(rowptrs, x, offsets, vdebayer_load_pred(src, x));
+            v4x_rows_t rows = vdebayer_load_rows_inner(rowptrs, x, offsets, src->w - x);
             v128_predicate_t pred = vdebayer_store_pred(src->w, x);
 
             vrgb_pixels_t pixels0 = vdebayer_bggr(rows.r0, rows.r1, rows.r2);
@@ -1781,7 +1781,7 @@ static void vdebayer_bggr_to_rgb565_awb(image_t *src, image_t *dst, image_t *buf
         v4x_row_ptrs_t rowptrs = vdebayer_rowptrs_init(src, y);
         uint16_t *p0 = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(buf, (y % VBAYER_BUF_BROWS));
 
-        v4x_rows_t rows = vdebayer_load_rows_inner(rowptrs, 0, offsets, vdebayer_load_pred(src, 0));
+        v4x_rows_t rows = vdebayer_load_rows_inner(rowptrs, 0, offsets, src->w);
         v128_predicate_t pred = vdebayer_store_pred(src->w, 0);
 
         vrgb_pixels_t pixels0 = vdebayer_bggr(rows.r0, rows.r1, rows.r2);
@@ -1799,7 +1799,7 @@ static void vdebayer_bggr_to_rgb565_awb(image_t *src, image_t *dst, image_t *buf
         }
 
         if (x < src->w) {
-            v4x_rows_t rows = vdebayer_load_rows_inner(rowptrs, x, offsets, vdebayer_load_pred(src, x));
+            v4x_rows_t rows = vdebayer_load_rows_inner(rowptrs, x, offsets, src->w - x);
             v128_predicate_t pred = vdebayer_store_pred(src->w, x);
 
             vrgb_pixels_t pixels0 = vdebayer_bggr(rows.r0, rows.r1, rows.r2);
@@ -1820,7 +1820,7 @@ static void vdebayer_gbrg_to_rgb565_awb(image_t *src, image_t *dst, image_t *buf
         uint16_t *p0 = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(buf, (y % VBAYER_BUF_BROWS));
         uint16_t *p1 = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(buf, ((y + 1) % VBAYER_BUF_BROWS));
 
-        v4x_rows_t rows = vdebayer_load_rows_inner(rowptrs, 0, offsets, vdebayer_load_pred(src, 0));
+        v4x_rows_t rows = vdebayer_load_rows_inner(rowptrs, 0, offsets, src->w);
         v128_predicate_t pred = vdebayer_store_pred(src->w, 0);
 
         vrgb_pixels_t pixels0 = vdebayer_gbrg(rows.r0, rows.r1, rows.r2);
@@ -1847,7 +1847,7 @@ static void vdebayer_gbrg_to_rgb565_awb(image_t *src, image_t *dst, image_t *buf
         }
 
         if (x < src->w) {
-            v4x_rows_t rows = vdebayer_load_rows_inner(rowptrs, x, offsets, vdebayer_load_pred(src, x));
+            v4x_rows_t rows = vdebayer_load_rows_inner(rowptrs, x, offsets, src->w - x);
             v128_predicate_t pred = vdebayer_store_pred(src->w, x);
 
             vrgb_pixels_t pixels0 = vdebayer_gbrg(rows.r0, rows.r1, rows.r2);
@@ -1867,7 +1867,7 @@ static void vdebayer_gbrg_to_rgb565_awb(image_t *src, image_t *dst, image_t *buf
         v4x_row_ptrs_t rowptrs = vdebayer_rowptrs_init(src, y);
         uint16_t *p0 = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(buf, (y % VBAYER_BUF_BROWS));
 
-        v4x_rows_t rows = vdebayer_load_rows_inner(rowptrs, 0, offsets, vdebayer_load_pred(src, 0));
+        v4x_rows_t rows = vdebayer_load_rows_inner(rowptrs, 0, offsets, src->w);
         v128_predicate_t pred = vdebayer_store_pred(src->w, 0);
 
         vrgb_pixels_t pixels0 = vdebayer_gbrg(rows.r0, rows.r1, rows.r2);
@@ -1885,7 +1885,7 @@ static void vdebayer_gbrg_to_rgb565_awb(image_t *src, image_t *dst, image_t *buf
         }
 
         if (x < src->w) {
-            v4x_rows_t rows = vdebayer_load_rows_inner(rowptrs, x, offsets, vdebayer_load_pred(src, x));
+            v4x_rows_t rows = vdebayer_load_rows_inner(rowptrs, x, offsets, src->w - x);
             v128_predicate_t pred = vdebayer_store_pred(src->w, x);
 
             vrgb_pixels_t pixels0 = vdebayer_gbrg(rows.r0, rows.r1, rows.r2);
@@ -1906,7 +1906,7 @@ static void vdebayer_grbg_to_rgb565_awb(image_t *src, image_t *dst, image_t *buf
         uint16_t *p0 = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(buf, (y % VBAYER_BUF_BROWS));
         uint16_t *p1 = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(buf, ((y + 1) % VBAYER_BUF_BROWS));
 
-        v4x_rows_t rows = vdebayer_load_rows_inner(rowptrs, 0, offsets, vdebayer_load_pred(src, 0));
+        v4x_rows_t rows = vdebayer_load_rows_inner(rowptrs, 0, offsets, src->w);
         v128_predicate_t pred = vdebayer_store_pred(src->w, 0);
 
         vrgb_pixels_t pixels0 = vdebayer_grbg(rows.r0, rows.r1, rows.r2);
@@ -1933,7 +1933,7 @@ static void vdebayer_grbg_to_rgb565_awb(image_t *src, image_t *dst, image_t *buf
         }
 
         if (x < src->w) {
-            v4x_rows_t rows = vdebayer_load_rows_inner(rowptrs, x, offsets, vdebayer_load_pred(src, x));
+            v4x_rows_t rows = vdebayer_load_rows_inner(rowptrs, x, offsets, src->w - x);
             v128_predicate_t pred = vdebayer_store_pred(src->w, x);
 
             vrgb_pixels_t pixels0 = vdebayer_grbg(rows.r0, rows.r1, rows.r2);
@@ -1953,7 +1953,7 @@ static void vdebayer_grbg_to_rgb565_awb(image_t *src, image_t *dst, image_t *buf
         v4x_row_ptrs_t rowptrs = vdebayer_rowptrs_init(src, y);
         uint16_t *p0 = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(buf, (y % VBAYER_BUF_BROWS));
 
-        v4x_rows_t rows = vdebayer_load_rows_inner(rowptrs, 0, offsets, vdebayer_load_pred(src, 0));
+        v4x_rows_t rows = vdebayer_load_rows_inner(rowptrs, 0, offsets, src->w);
         v128_predicate_t pred = vdebayer_store_pred(src->w, 0);
 
         vrgb_pixels_t pixels0 = vdebayer_grbg(rows.r0, rows.r1, rows.r2);
@@ -1971,7 +1971,7 @@ static void vdebayer_grbg_to_rgb565_awb(image_t *src, image_t *dst, image_t *buf
         }
 
         if (x < src->w) {
-            v4x_rows_t rows = vdebayer_load_rows_inner(rowptrs, x, offsets, vdebayer_load_pred(src, x));
+            v4x_rows_t rows = vdebayer_load_rows_inner(rowptrs, x, offsets, src->w - x);
             v128_predicate_t pred = vdebayer_store_pred(src->w, x);
 
             vrgb_pixels_t pixels0 = vdebayer_grbg(rows.r0, rows.r1, rows.r2);
@@ -1992,7 +1992,7 @@ static void vdebayer_rggb_to_rgb565_awb(image_t *src, image_t *dst, image_t *buf
         uint16_t *p0 = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(buf, (y % VBAYER_BUF_BROWS));
         uint16_t *p1 = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(buf, ((y + 1) % VBAYER_BUF_BROWS));
 
-        v4x_rows_t rows = vdebayer_load_rows_inner(rowptrs, 0, offsets, vdebayer_load_pred(src, 0));
+        v4x_rows_t rows = vdebayer_load_rows_inner(rowptrs, 0, offsets, src->w);
         v128_predicate_t pred = vdebayer_store_pred(src->w, 0);
 
         vrgb_pixels_t pixels0 = vdebayer_rggb(rows.r0, rows.r1, rows.r2);
@@ -2019,7 +2019,7 @@ static void vdebayer_rggb_to_rgb565_awb(image_t *src, image_t *dst, image_t *buf
         }
 
         if (x < src->w) {
-            v4x_rows_t rows = vdebayer_load_rows_inner(rowptrs, x, offsets, vdebayer_load_pred(src, x));
+            v4x_rows_t rows = vdebayer_load_rows_inner(rowptrs, x, offsets, src->w - x);
             v128_predicate_t pred = vdebayer_store_pred(src->w, x);
 
             vrgb_pixels_t pixels0 = vdebayer_rggb(rows.r0, rows.r1, rows.r2);
@@ -2039,7 +2039,7 @@ static void vdebayer_rggb_to_rgb565_awb(image_t *src, image_t *dst, image_t *buf
         v4x_row_ptrs_t rowptrs = vdebayer_rowptrs_init(src, y);
         uint16_t *p0 = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(buf, (y % VBAYER_BUF_BROWS));
 
-        v4x_rows_t rows = vdebayer_load_rows_inner(rowptrs, 0, offsets, vdebayer_load_pred(src, 0));
+        v4x_rows_t rows = vdebayer_load_rows_inner(rowptrs, 0, offsets, src->w);
         v128_predicate_t pred = vdebayer_store_pred(src->w, 0);
 
         vrgb_pixels_t pixels0 = vdebayer_rggb(rows.r0, rows.r1, rows.r2);
@@ -2057,7 +2057,7 @@ static void vdebayer_rggb_to_rgb565_awb(image_t *src, image_t *dst, image_t *buf
         }
 
         if (x < src->w) {
-            v4x_rows_t rows = vdebayer_load_rows_inner(rowptrs, x, offsets, vdebayer_load_pred(src, x));
+            v4x_rows_t rows = vdebayer_load_rows_inner(rowptrs, x, offsets, src->w - x);
             v128_predicate_t pred = vdebayer_store_pred(src->w, x);
 
             vrgb_pixels_t pixels0 = vdebayer_rggb(rows.r0, rows.r1, rows.r2);
