@@ -130,9 +130,10 @@ typedef enum {
 
 // OMV_CSI_IOCTL_SET_TRIGGERED_MODE values. The first two match false/true.
 typedef enum {
-    OMV_CSI_TRIGGER_OFF = 0,    // The sensor free runs.
-    OMV_CSI_TRIGGER_OUT = 1,    // snapshot() drives the frame sync pin to trigger the sensor.
-    OMV_CSI_TRIGGER_IN  = 2,    // An external device drives the frame sync pin to trigger the sensor.
+    OMV_CSI_TRIGGER_OFF  = 0,   // The sensor free runs.
+    OMV_CSI_TRIGGER_OUT  = 1,   // snapshot() drives the frame sync pin to trigger the sensor.
+    OMV_CSI_TRIGGER_IN   = 2,   // An external device drives the frame sync pin to trigger the sensor.
+    OMV_CSI_TRIGGER_SOFT = 3,   // snapshot() sends the sensor a command to trigger it.
 } omv_csi_trigger_mode_t;
 
 typedef enum {
@@ -324,6 +325,7 @@ typedef enum {
 
     // Internal requests, not exported to Python.
     OMV_CSI_IOCTL_UPDATE_AGC_AEC                  = 0xF00,
+    OMV_CSI_IOCTL_SOFT_TRIGGER                    = 0xF01,
 } omv_csi_ioctl_t;
 
 typedef struct {

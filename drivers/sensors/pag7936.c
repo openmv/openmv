@@ -949,7 +949,7 @@ static int set_vflip(omv_csi_t *csi, int enable) {
 static int set_triggered_mode(omv_csi_t *csi, int mode) {
     int ret = 0;
 
-    if (mode < OMV_CSI_TRIGGER_OFF || mode > OMV_CSI_TRIGGER_IN) {
+    if (mode < OMV_CSI_TRIGGER_OFF || mode > OMV_CSI_TRIGGER_SOFT) {
         return -1;
     }
 
@@ -960,14 +960,16 @@ static int set_triggered_mode(omv_csi_t *csi, int mode) {
     omv_csi_set_trigger_mode(csi, mode);
 
     if (mode != OMV_CSI_TRIGGER_OFF) {
-        // The sensor outputs its strobe on the pin it's triggered by, so turn strobe mode off.
-        ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, SENSOR_GPIO0_SEL, 2, 0, 1);
-        ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, SENSOR_GPIO0, 2, SENSOR_GPIO0_INPUT, 1);
         ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, SENSOR_TG_EN, 2, 0, 1);
         ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, SENSOR_TRIGGER_EN, 2, SENSOR_TRIGGER_EN_FLAG, 1);
         ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, SENSOR_TRIGGER_MODE, 2, SENSOR_TRIGGER_MODE_1, 1);
-        ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, SENSOR_TRIGGER_EN, 2,
-                                 SENSOR_TRIGGER_EN_FLAG | SENSOR_TRIGGER_MODE_GPIO0, 1);
+        if (mode != OMV_CSI_TRIGGER_SOFT) {
+            // The sensor outputs its strobe on the pin it's triggered by, so turn strobe mode off.
+            ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, SENSOR_GPIO0_SEL, 2, 0, 1);
+            ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, SENSOR_GPIO0, 2, SENSOR_GPIO0_INPUT, 1);
+            ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, SENSOR_TRIGGER_EN, 2,
+                                     SENSOR_TRIGGER_EN_FLAG | SENSOR_TRIGGER_MODE_GPIO0, 1);
+        }
     } else {
         ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, SENSOR_TG_EN, 2, SENSOR_TG_EN_FLAG, 1);
         ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, SENSOR_TRIGGER_EN, 2, 0, 1);
@@ -1007,6 +1009,10 @@ static int ioctl(omv_csi_t *csi, int request, void *arg) {
             ret |= set_triggered_mode(csi, a->ivalue);
             break;
         }
+        case OMV_CSI_IOCTL_SOFT_TRIGGER: {
+            ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, SENSOR_SOFTWARE_TRIGGER, 2, 1, 1);
+            break;
+        }
         case OMV_CSI_IOCTL_GET_TRIGGERED_MODE: {
             a->ivalue = csi->trigger_mode;
             break;
@@ -1015,8 +1021,9 @@ static int ioctl(omv_csi_t *csi, int request, void *arg) {
             int enable = a->ivalue;
 
             if (enable) {
-                // The sensor outputs its strobe on the pin it's triggered by, so it can't be triggered.
-                if (csi->trigger_mode != OMV_CSI_TRIGGER_OFF) {
+                // The sensor outputs its strobe on the pin it's triggered by, so it can only be
+                // triggered by a command then.
+                if (csi->trigger_mode == OMV_CSI_TRIGGER_OUT || csi->trigger_mode == OMV_CSI_TRIGGER_IN) {
                     omv_csi_abort(csi, true, false);
                     ret |= set_triggered_mode(csi, OMV_CSI_TRIGGER_OFF);
                 }

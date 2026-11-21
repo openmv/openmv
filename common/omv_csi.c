@@ -1829,6 +1829,10 @@ __weak int omv_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
 
     if (trigger) {
         omv_gpio_write(csi->fsync_pin, 1);
+    } else if (csi->trigger_mode == OMV_CSI_TRIGGER_SOFT) {
+        if (omv_csi_ioctl(csi, OMV_CSI_IOCTL_SOFT_TRIGGER, NULL) != 0) {
+            return OMV_CSI_ERROR_CTL_FAILED;
+        }
     }
 
     // Call the sensor specific function.
