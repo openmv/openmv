@@ -146,7 +146,8 @@ static const omv_csi_ccm_t ps5520_ccm[] = {
     },
 };
 
-static const omv_csi_ccm_table_t ps5520_ccm_table = { OMV_ARRAY_SIZE(ps5520_ccm), ps5520_ccm };
+// The CCM fades over the last doubling of the 32x max gain.
+static const omv_csi_ccm_table_t ps5520_ccm_table = { OMV_ARRAY_SIZE(ps5520_ccm), ps5520_ccm, { 24.0f, 30.0f } };
 #endif // OMV_CSI_HW_CCM_ENABLE
 
 static const uint8_t sw_reset_regs[][2] = {
