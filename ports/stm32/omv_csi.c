@@ -98,6 +98,15 @@ void CSI_IRQHandler(void) {
     HAL_DCMIPP_CSI_IRQHandler(&csi->dcmipp);
 }
 
+// The D-PHY reports a line error on the first frame after the sensor's MIPI lanes stop and restart,
+// which happens when the sensor is suspended to change modes. The CSI-2 host stops the virtual channel
+// then, and the HAL moves to the error state, which fails all further configuration. Neither is fatal.
+void HAL_DCMIPP_CSI_LineErrorCallback(DCMIPP_HandleTypeDef *hdcmipp, uint32_t lane) {
+    hdcmipp->ErrorCode = HAL_DCMIPP_ERROR_NONE;
+    hdcmipp->State = HAL_DCMIPP_STATE_READY;
+    SET_BIT(CSI->CR, CSI_CR_VC0START);
+}
+
 void DCMIPP_IRQHandler(void) {
     omv_csi_t *csi = stm_csi_all[CSI_HANDLE_DCMIPP];
     HAL_DCMIPP_IRQHandler(&csi->dcmipp);
@@ -356,7 +365,11 @@ static int stm_csi_abort(omv_csi_t *csi, bool fifo_flush, bool in_irq) {
         __HAL_DCMI_CLEAR_FLAG(&csi->dcmi, DCMI_FLAG_FRAMERI);
     } else {
         #if USE_DCMIPP
-        HAL_DCMIPP_CSI_PIPE_Stop(&csi->dcmipp, DCMIPP_PIPE, DCMIPP_VIRTUAL_CHANNEL0);
+        if (HAL_DCMIPP_CSI_PIPE_Stop(&csi->dcmipp, DCMIPP_PIPE, DCMIPP_VIRTUAL_CHANNEL0) != HAL_OK) {
+            // The virtual channel stops at the end of a frame, which an idle triggered sensor
+            // doesn't send. The pipe is stopped by then though, so it can be started again.
+            csi->dcmipp.PipeState[DCMIPP_PIPE] = HAL_DCMIPP_PIPE_STATE_READY;
+        }
         #endif // USE_DCMIPP
     }
     return 0;
@@ -606,6 +619,10 @@ static int stm_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
                 return OMV_CSI_ERROR_CSI_INIT_FAILED;
             }
 
+            // Clear the flags left from the last capture, so they don't end this one early.
+            __HAL_DCMIPP_CLEAR_FLAG(&csi->dcmipp, DCMIPP_FLAG_PIPE1_FRAME |
+                                    DCMIPP_FLAG_PIPE1_VSYNC | DCMIPP_FLAG_PIPE1_OVR);
+
             // Start the DCMIPP
             if (HAL_DCMIPP_CSI_PIPE_Start(&csi->dcmipp, DCMIPP_PIPE, DCMIPP_VIRTUAL_CHANNEL0,
                                           (uint32_t) buffer->data, DCMIPP_MODE_CONTINUOUS) != HAL_OK) {
@@ -729,7 +746,10 @@ static int stm_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
         }
 
         if ((mp_hal_ticks_ms() - start) > OMV_CSI_TIMEOUT_MS) {
-            omv_csi_abort(csi, true, false);
+            // Stay ready for the next frame in trigger in mode, a timeout just means no trigger.
+            if (csi->trigger_mode != OMV_CSI_TRIGGER_IN) {
+                omv_csi_abort(csi, true, false);
+            }
             return OMV_CSI_ERROR_CAPTURE_TIMEOUT;
         }
     }

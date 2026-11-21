@@ -946,6 +946,46 @@ static int set_vflip(omv_csi_t *csi, int enable) {
     return ret;
 }
 
+static int set_triggered_mode(omv_csi_t *csi, int mode) {
+    int ret = 0;
+
+    if (mode < OMV_CSI_TRIGGER_OFF || mode > OMV_CSI_TRIGGER_SOFT) {
+        return -1;
+    }
+
+    ret |= suspend(csi);
+
+    // The sensor is triggered by the rising edge of the frame sync pin in both triggered modes.
+    // Change who drives the pin while the sensor is suspended, so that doesn't trigger it.
+    omv_csi_set_trigger_mode(csi, mode);
+
+    if (mode != OMV_CSI_TRIGGER_OFF) {
+        ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, SENSOR_TG_EN, 2, 0, 1);
+        ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, SENSOR_TRIGGER_EN, 2, SENSOR_TRIGGER_EN_FLAG, 1);
+        ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, SENSOR_TRIGGER_MODE, 2, SENSOR_TRIGGER_MODE_1, 1);
+        if (mode != OMV_CSI_TRIGGER_SOFT) {
+            // The sensor outputs its strobe on the pin it's triggered by, so turn strobe mode off.
+            ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, SENSOR_GPIO0_SEL, 2, 0, 1);
+            ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, SENSOR_GPIO0, 2, SENSOR_GPIO0_INPUT, 1);
+            ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, SENSOR_TRIGGER_EN, 2,
+                                     SENSOR_TRIGGER_EN_FLAG | SENSOR_TRIGGER_MODE_GPIO0, 1);
+        }
+    } else {
+        ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, SENSOR_TG_EN, 2, SENSOR_TG_EN_FLAG, 1);
+        ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, SENSOR_TRIGGER_EN, 2, 0, 1);
+        ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, SENSOR_TRIGGER_MODE, 2, 0, 1);
+    }
+
+    ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, SENSOR_OPMODE, 2, SENSOR_OPMODE_RUN, 1);
+
+    // Skip past the first corrupt frames...
+    if (!csi->disable_delays) {
+        mp_hal_delay_ms(100);
+    }
+
+    return ret;
+}
+
 static int ioctl(omv_csi_t *csi, int request, void *arg) {
     int ret = 0;
     omv_csi_ioctl_arg_t *a = arg;
@@ -966,54 +1006,32 @@ static int ioctl(omv_csi_t *csi, int request, void *arg) {
             break;
         }
         case OMV_CSI_IOCTL_SET_TRIGGERED_MODE: {
-            int enable = a->ivalue;
-            ret |= suspend(csi);
-
-            if (enable) {
-                ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, SENSOR_TG_EN, 2, 0, 1);
-                ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, SENSOR_TRIGGER_EN, 2, SENSOR_TRIGGER_EN_FLAG, 1);
-                ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, SENSOR_TRIGGER_MODE, 2, SENSOR_TRIGGER_MODE_1, 1);
-                ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, SENSOR_TRIGGER_EN, 2,
-                                         SENSOR_TRIGGER_EN_FLAG | SENSOR_TRIGGER_MODE_GPIO0, 1);
-            } else {
-                ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, SENSOR_TG_EN, 2, SENSOR_TG_EN_FLAG, 1);
-                ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, SENSOR_TRIGGER_EN, 2, 0, 1);
-                ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, SENSOR_TRIGGER_MODE, 2, 0, 1);
-            }
-
-            ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, SENSOR_OPMODE, 2, SENSOR_OPMODE_RUN, 1);
-
-            // Skip past the first corrupt frames...
-            if (!csi->disable_delays) {
-                mp_hal_delay_ms(100);
-            }
+            ret |= set_triggered_mode(csi, a->ivalue);
+            break;
+        }
+        case OMV_CSI_IOCTL_SOFT_TRIGGER: {
+            ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, SENSOR_SOFTWARE_TRIGGER, 2, 1, 1);
             break;
         }
         case OMV_CSI_IOCTL_GET_TRIGGERED_MODE: {
-            uint8_t reg;
-            ret |= omv_i2c_read_reg(csi->i2c, csi->slv_addr, SENSOR_TG_EN, 2, &reg, 1);
-            if (ret >= 0) {
-                a->ivalue = (reg & SENSOR_TG_EN_FLAG) ? 0 : 1;
-            }
+            a->ivalue = csi->trigger_mode;
             break;
         }
         case OMV_CSI_IOCTL_SET_STROBE_MODE: {
             int enable = a->ivalue;
 
             if (enable) {
-                // Stop driving the trigger pin, the sensor outputs its strobe on it.
-                if (csi->fsync_pin) {
-                    omv_gpio_config(csi->fsync_pin, OMV_GPIO_MODE_INPUT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_LOW, -1);
+                // The sensor outputs its strobe on the pin it's triggered by, so it can only be
+                // triggered by a command then.
+                if (csi->trigger_mode == OMV_CSI_TRIGGER_OUT || csi->trigger_mode == OMV_CSI_TRIGGER_IN) {
+                    omv_csi_abort(csi, true, false);
+                    ret |= set_triggered_mode(csi, OMV_CSI_TRIGGER_OFF);
                 }
                 ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, SENSOR_GPIO0, 2, SENSOR_GPIO0_OUTPUT, 1);
                 ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, SENSOR_GPIO0_SEL, 2, SENSOR_GPIO0_SEL_LED, 1);
             } else {
                 ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, SENSOR_GPIO0_SEL, 2, 0, 1);
                 ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, SENSOR_GPIO0, 2, SENSOR_GPIO0_INPUT, 1);
-                if (csi->fsync_pin) {
-                    omv_gpio_config(csi->fsync_pin, OMV_GPIO_MODE_OUTPUT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_LOW, -1);
-                    omv_gpio_write(csi->fsync_pin, 0);
-                }
             }
             break;
         }
