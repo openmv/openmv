@@ -81,6 +81,8 @@ static size_t py_ml_tuple_sum(mp_obj_tuple_t *o) {
 
 static size_t py_ml_dtype_size(char dtype) {
     switch (dtype) {
+        case 'q':
+            return 8;
         case 'f':
         case 'i':
             return 4;
@@ -94,6 +96,11 @@ static size_t py_ml_dtype_size(char dtype) {
 
 static void py_ml_process_input(py_ml_model_obj_t *model, mp_obj_t arg) {
     mp_obj_list_t *input_list = MP_OBJ_TO_PTR(arg);
+
+    if (input_list->len != model->inputs_size) {
+        mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("Expected %d inputs, got %d"),
+                          (int) model->inputs_size, (int) input_list->len);
+    }
 
     for (size_t i = 0; i < model->inputs_size; i++) {
         void *input_buffer = model->backend->get_input(model, i);
@@ -159,6 +166,20 @@ static void py_ml_process_input(py_ml_model_obj_t *model, mp_obj_t arg) {
                     float value = ndarray_get_float_index(input_array->array, input_array->dtype, i);
                     model_input_16[i] = (uint16_t) ((value * input_scale) + input_zero_point);
                 }
+            } else if (input_dtype == 'i') {
+                int32_t *model_input_32 = (int32_t *) input_buffer;
+                for (size_t i = 0; i < input_array->len; i++) {
+                    float value = ndarray_get_float_index(input_array->array, input_array->dtype, i);
+                    model_input_32[i] = (int32_t) ((value * input_scale) + input_zero_point);
+                }
+            } else if (input_dtype == 'q') {
+                int64_t *model_input_64 = (int64_t *) input_buffer;
+                for (size_t i = 0; i < input_array->len; i++) {
+                    float value = ndarray_get_float_index(input_array->array, input_array->dtype, i);
+                    model_input_64[i] = (int64_t) ((value * input_scale) + input_zero_point);
+                }
+            } else {
+                mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Unsupported input tensor data type"));
             }
         } else {
             mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Unsupported input type"));
@@ -176,6 +197,12 @@ static mp_obj_t py_ml_process_output(py_ml_model_obj_t *model, bool deep_copy) {
         int output_zero_point = mp_obj_get_int(model->output_zero_point->items[i]);
         int output_dtype = mp_obj_get_int(model->output_dtype->items[i]);
 
+        // Outputs of data types the backend can't map are returned as None.
+        if (output_dtype == 0) {
+            output_list->items[i] = mp_const_none;
+            continue;
+        }
+
         size_t shape[ULAB_MAX_DIMS] = {};
 
         if (ULAB_MAX_DIMS < output_shape->len) {
@@ -189,7 +216,11 @@ static mp_obj_t py_ml_process_output(py_ml_model_obj_t *model, bool deep_copy) {
 
         ndarray_obj_t *ndarray;
 
-        if (deep_copy) {
+        // ulab has no 32-bit or 64-bit integer or bool arrays, so these outputs are
+        // always converted to float.
+        bool ulab_dtype = strchr("bBhHf", output_dtype) != NULL;
+
+        if (deep_copy || !ulab_dtype) {
             ndarray = ndarray_new_dense_ndarray(output_shape->len, shape, NDARRAY_FLOAT);
 
             if (output_dtype == 'f') {
@@ -213,6 +244,20 @@ static mp_obj_t py_ml_process_output(py_ml_model_obj_t *model, bool deep_copy) {
                 for (size_t j = 0; j < size; j++) {
                     float v = (((uint16_t *) model_output)[j] - output_zero_point);
                     ((float *) ndarray->array)[j] = v * output_scale;
+                }
+            } else if (output_dtype == 'i') {
+                for (size_t j = 0; j < size; j++) {
+                    float v = (((int32_t *) model_output)[j] - output_zero_point);
+                    ((float *) ndarray->array)[j] = v * output_scale;
+                }
+            } else if (output_dtype == 'q') {
+                for (size_t j = 0; j < size; j++) {
+                    float v = (((int64_t *) model_output)[j] - output_zero_point);
+                    ((float *) ndarray->array)[j] = v * output_scale;
+                }
+            } else if (output_dtype == '?') {
+                for (size_t j = 0; j < size; j++) {
+                    ((float *) ndarray->array)[j] = ((uint8_t *) model_output)[j] ? 1.0f : 0.0f;
                 }
             }
         } else {
@@ -239,7 +284,7 @@ static mp_obj_t py_ml_dtype_char_tuple(const mp_obj_tuple_t *dtype) {
     mp_obj_tuple_t *r = (mp_obj_tuple_t *) MP_OBJ_TO_PTR(mp_obj_new_tuple(dtype->len, NULL));
     for (size_t i = 0; i < dtype->len; i++) {
         char d = mp_obj_get_int(dtype->items[i]);
-        r->items[i] = mp_obj_new_str(&d, 1);
+        r->items[i] = d ? mp_obj_new_str(&d, 1) : mp_const_none;
     }
     return r;
 }
@@ -437,8 +482,18 @@ mp_obj_t py_ml_model_make_new(const mp_obj_type_t *type, size_t n_args, size_t n
         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Unsupported model format"));
     }
 
+    // Free the backend's memory right away if initialization fails, instead of when
+    // the model is collected.
     model->input_layout = NULL;
-    model->backend->init_model(model);
+    nlr_buf_t nlr;
+    if (nlr_push(&nlr) == 0) {
+        model->backend->init_model(model);
+        nlr_pop();
+    } else {
+        model->backend->deinit_model(model);
+        model->backend = NULL;
+        nlr_jump(nlr.ret_val);
+    }
 
     // Backends that don't set the input layout use NHWC for 4D inputs.
     if (model->input_layout == NULL) {
