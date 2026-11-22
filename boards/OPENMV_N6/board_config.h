@@ -320,6 +320,7 @@
 #define OMV_CSI_HW_CROP_ENABLE              (1)
 #define OMV_CSI_MAX_DEVICES                 (3)
 #define OMV_CSI_STATS_ENABLE                (1)
+#define OMV_CSI_STATS_IMAGE_ENABLE          (1)
 #define OMV_CSI_HW_SCALE_ENABLE             (1)
 #define OMV_CSI_HW_CCM_ENABLE               (1)
 
