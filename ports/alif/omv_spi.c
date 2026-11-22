@@ -191,7 +191,7 @@ int omv_spi_init(omv_spi_t *spi, omv_spi_config_t *config) {
     spi_disable(spi->inst);
 
     // Initialize GPIOs and clocks.
-    alif_hal_spi_init(config->id, config->nss_enable, config->nss_pol);
+    alif_hal_spi_init(config->id, config->nss_enable, config->nss_pol, config->bus_mode);
 
     // Disable all interrupts.
     spi_mask_interrupts(spi->inst);
@@ -265,7 +265,7 @@ int omv_spi_deinit(omv_spi_t *spi) {
     // Disable SPI.
     spi_disable(spi->inst);
     // Deinitialize GPIOs and clocks.
-    alif_hal_spi_deinit(spi->id);
+    alif_hal_spi_deinit(spi->id, spi->bus_mode);
     return 0;
 }
 
