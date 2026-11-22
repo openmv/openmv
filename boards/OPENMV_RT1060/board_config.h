@@ -170,7 +170,7 @@
 // SPI LCD Interface
 #define OMV_SPI_DISPLAY_CONTROLLER      (OMV_SPI3_ID)
 #define OMV_SPI_DISPLAY_MOSI_PIN        (&omv_pin_LPSPI3_MOSI)
-#define OMV_SPI_DISPLAY_MISO_PIN        (&omv_pin_LPSPI3_MISO_GPIO)
+#define OMV_SPI_DISPLAY_MISO_PIN        (&omv_pin_LPSPI3_MISO)
 #define OMV_SPI_DISPLAY_SCLK_PIN        (&omv_pin_LPSPI3_SCLK)
 #define OMV_SPI_DISPLAY_SSEL_PIN        (&omv_pin_LPSPI3_GPIO)
 
