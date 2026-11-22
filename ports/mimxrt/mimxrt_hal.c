@@ -245,7 +245,7 @@ int mimxrt_hal_spi_init(uint32_t bus_id, bool nss_enable, uint32_t nss_pol, uint
     if (nss_enable) {
         omv_gpio_config(spi_pins.ssel_pin, OMV_GPIO_MODE_ALT, OMV_GPIO_PULL_UP, OMV_GPIO_SPEED_MED, -1);
     } else {
-        omv_gpio_config(spi_pins.ssel_pin, OMV_GPIO_MODE_OUTPUT, OMV_GPIO_PULL_UP, OMV_GPIO_SPEED_MED, 5);
+        omv_gpio_config(spi_pins.ssel_pin, OMV_GPIO_MODE_OUTPUT, OMV_GPIO_PULL_UP, OMV_GPIO_SPEED_MED, -1);
         if (nss_pol == OMV_SPI_NSS_LOW) {
             omv_gpio_write(spi_pins.ssel_pin, 1);
         } else {

@@ -26,6 +26,7 @@
 #ifndef __PY_DISPLAY_H__
 #define __PY_DISPLAY_H__
 
+#include "py/mphal.h"
 #include "omv_gpio.h"
 #include "omv_spi.h"
 #include "py_image.h"
@@ -76,6 +77,7 @@ typedef struct _py_display_obj_t {
     omv_spi_t spi_bus;
     bool spi_tx_running;
     uint32_t spi_baudrate;
+    mp_hal_pin_obj_t spi_rs_pin;    // User RS pin, or NULL to use the board's RS pin.
     #if MICROPY_PY_TV
     volatile uint32_t spi_state;
     #endif
