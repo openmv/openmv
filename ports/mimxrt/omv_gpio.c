@@ -87,7 +87,14 @@ static const imxrt_pad_af_t *omv_gpio_find_af(omv_gpio_t pin, uint32_t af) {
 
 void omv_gpio_config(omv_gpio_t pin, uint32_t mode, uint32_t pull, uint32_t speed, uint32_t af) {
     const imxrt_pad_t *pad = pin->pad;
-    af = ((af == -1) ? pin->af : af);
+    if (af == -1) {
+        // Use the pin's default AF for ALT modes, and the GPIO function (ALT5) for all other modes.
+        if (mode == OMV_GPIO_MODE_ALT || mode == OMV_GPIO_MODE_ALT_OD) {
+            af = pin->af;
+        } else {
+            af = 5;
+        }
+    }
     const imxrt_pad_af_t *pad_af = omv_gpio_find_af(pin, af);
 
     if (pad_af == NULL) {
