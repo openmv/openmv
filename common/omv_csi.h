@@ -399,6 +399,16 @@ typedef struct omv_csi_stats {
 } omv_csi_stats_t;
 #endif // defined(OMV_CSI_STATS_ENABLE)
 
+// The processing a port applied to an image after the sensor, which the AWB stats undo
+// to measure the sensor's own colors: raw -> gains -> CCM -> gamma.
+typedef struct omv_csi_stats_xform {
+    float gains[3];         // White balance gains (1.0 if none).
+    bool ccm_valid;         // True if a color correction matrix was applied after the gains.
+    float ccm[3][3];        // Color correction matrix.
+    float offsets[3];       // Color correction offsets.
+    float gamma;            // Gamma applied last as a gain per pixel that keeps color ratios (1.0 if none).
+} omv_csi_stats_xform_t;
+
 // Log chromaticity of the raw R/G/B averages, folded to a constant at compile time.
 #define OMV_CSI_CCM_CHROMA(r, g, b) { __builtin_logf((float) (r) / (g)), __builtin_logf((float) (b) / (g)) }
 
@@ -653,6 +663,11 @@ int omv_csi_get_rgb_gain_db(omv_csi_t *csi, float *r_gain_db, float *g_gain_db, 
 #if defined(OMV_CSI_STATS_ENABLE)
 // Update RGB moving average struct.
 void omv_csi_stats_update(omv_csi_t *csi, uint32_t *r, uint32_t *g, uint32_t *b, uint32_t ms);
+
+// Update RGB moving average struct from an RGB565 image. Pixels clipped in any channel or too dark are
+// skipped, and the rest are mapped back to sensor colors by undoing xform. Returns false if too few
+// pixels were usable, in which case the averages are held.
+bool omv_csi_stats_update_image(omv_csi_t *csi, const image_t *image, const omv_csi_stats_xform_t *xform, uint32_t ms);
 
 // Get RGB moving average values.
 void omv_csi_stats_get(omv_csi_t *csi, float *r, float *g, float *b);
