@@ -31,6 +31,7 @@
  * Python Machine Learning Module.
  */
 #include <stdio.h>
+#include <string.h>
 #include "py/runtime.h"
 #include "py/obj.h"
 #include "py/objlist.h"
@@ -53,6 +54,19 @@
 
 #define IMLIB_ML_MODEL_ALIGN    (OMV_CACHE_LINE_SIZE)
 
+// Backends compiled into the firmware, probed in order.
+static const ml_backend_t *const py_ml_backends[] = {
+    #if MICROPY_PY_ML_TFLM
+    &ml_backend_tflm,
+    #endif
+    #if MICROPY_PY_ML_STAI
+    &ml_backend_stai,
+    #endif
+    #if MICROPY_PY_ML_TORCH
+    &ml_backend_torch,
+    #endif
+};
+
 static size_t py_ml_tuple_sum(mp_obj_tuple_t *o) {
     if (o->len < 1) {
         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Unexpected tensor shape"));
@@ -67,7 +81,10 @@ static size_t py_ml_tuple_sum(mp_obj_tuple_t *o) {
 
 static size_t py_ml_dtype_size(char dtype) {
     switch (dtype) {
+        case 'q':
+            return 8;
         case 'f':
+        case 'i':
             return 4;
         case 'H':
         case 'h':
@@ -80,8 +97,13 @@ static size_t py_ml_dtype_size(char dtype) {
 static void py_ml_process_input(py_ml_model_obj_t *model, mp_obj_t arg) {
     mp_obj_list_t *input_list = MP_OBJ_TO_PTR(arg);
 
+    if (input_list->len != model->inputs_size) {
+        mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("Expected %d inputs, got %d"),
+                          (int) model->inputs_size, (int) input_list->len);
+    }
+
     for (size_t i = 0; i < model->inputs_size; i++) {
-        void *input_buffer = ml_backend_get_input(model, i);
+        void *input_buffer = model->backend->get_input(model, i);
         size_t input_size = py_ml_tuple_sum(MP_OBJ_TO_PTR(model->input_shape->items[i]));
         mp_obj_tuple_t *input_shape = MP_OBJ_TO_PTR(model->input_shape->items[i]);
         float input_scale = 1.0f / mp_obj_get_float_to_f(model->input_scale->items[i]);
@@ -144,6 +166,20 @@ static void py_ml_process_input(py_ml_model_obj_t *model, mp_obj_t arg) {
                     float value = ndarray_get_float_index(input_array->array, input_array->dtype, i);
                     model_input_16[i] = (uint16_t) ((value * input_scale) + input_zero_point);
                 }
+            } else if (input_dtype == 'i') {
+                int32_t *model_input_32 = (int32_t *) input_buffer;
+                for (size_t i = 0; i < input_array->len; i++) {
+                    float value = ndarray_get_float_index(input_array->array, input_array->dtype, i);
+                    model_input_32[i] = (int32_t) ((value * input_scale) + input_zero_point);
+                }
+            } else if (input_dtype == 'q') {
+                int64_t *model_input_64 = (int64_t *) input_buffer;
+                for (size_t i = 0; i < input_array->len; i++) {
+                    float value = ndarray_get_float_index(input_array->array, input_array->dtype, i);
+                    model_input_64[i] = (int64_t) ((value * input_scale) + input_zero_point);
+                }
+            } else {
+                mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Unsupported input tensor data type"));
             }
         } else {
             mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Unsupported input type"));
@@ -154,12 +190,18 @@ static void py_ml_process_input(py_ml_model_obj_t *model, mp_obj_t arg) {
 static mp_obj_t py_ml_process_output(py_ml_model_obj_t *model, bool deep_copy) {
     mp_obj_list_t *output_list = MP_OBJ_TO_PTR(mp_obj_new_list(model->outputs_size, NULL));
     for (size_t i = 0; i < model->outputs_size; i++) {
-        void *model_output = ml_backend_get_output(model, i);
+        void *model_output = model->backend->get_output(model, i);
         size_t size = py_ml_tuple_sum(MP_OBJ_TO_PTR(model->output_shape->items[i]));
         mp_obj_tuple_t *output_shape = MP_OBJ_TO_PTR(model->output_shape->items[i]);
         float output_scale = mp_obj_get_float_to_f(model->output_scale->items[i]);
         int output_zero_point = mp_obj_get_int(model->output_zero_point->items[i]);
         int output_dtype = mp_obj_get_int(model->output_dtype->items[i]);
+
+        // Outputs of data types the backend can't map are returned as None.
+        if (output_dtype == 0) {
+            output_list->items[i] = mp_const_none;
+            continue;
+        }
 
         size_t shape[ULAB_MAX_DIMS] = {};
 
@@ -174,7 +216,11 @@ static mp_obj_t py_ml_process_output(py_ml_model_obj_t *model, bool deep_copy) {
 
         ndarray_obj_t *ndarray;
 
-        if (deep_copy) {
+        // ulab has no 32-bit or 64-bit integer or bool arrays, so these outputs are
+        // always converted to float.
+        bool ulab_dtype = strchr("bBhHf", output_dtype) != NULL;
+
+        if (deep_copy || !ulab_dtype) {
             ndarray = ndarray_new_dense_ndarray(output_shape->len, shape, NDARRAY_FLOAT);
 
             if (output_dtype == 'f') {
@@ -199,6 +245,20 @@ static mp_obj_t py_ml_process_output(py_ml_model_obj_t *model, bool deep_copy) {
                     float v = (((uint16_t *) model_output)[j] - output_zero_point);
                     ((float *) ndarray->array)[j] = v * output_scale;
                 }
+            } else if (output_dtype == 'i') {
+                for (size_t j = 0; j < size; j++) {
+                    float v = (((int32_t *) model_output)[j] - output_zero_point);
+                    ((float *) ndarray->array)[j] = v * output_scale;
+                }
+            } else if (output_dtype == 'q') {
+                for (size_t j = 0; j < size; j++) {
+                    float v = (((int64_t *) model_output)[j] - output_zero_point);
+                    ((float *) ndarray->array)[j] = v * output_scale;
+                }
+            } else if (output_dtype == '?') {
+                for (size_t j = 0; j < size; j++) {
+                    ((float *) ndarray->array)[j] = ((uint8_t *) model_output)[j] ? 1.0f : 0.0f;
+                }
             }
         } else {
             ndarray = ndarray_new_ndarray(output_shape->len, shape, NULL, output_dtype, model_output);
@@ -213,11 +273,18 @@ static mp_obj_t py_ml_process_output(py_ml_model_obj_t *model, bool deep_copy) {
 // TF Model Object.
 static const mp_obj_type_t py_ml_model_type;
 
+mp_obj_t py_ml_layout_obj(const char *layout) {
+    if (layout == NULL) {
+        return mp_const_none;
+    }
+    return MP_OBJ_NEW_QSTR(strcmp(layout, "NCHW") == 0 ? MP_QSTR_NCHW : MP_QSTR_NHWC);
+}
+
 static mp_obj_t py_ml_dtype_char_tuple(const mp_obj_tuple_t *dtype) {
     mp_obj_tuple_t *r = (mp_obj_tuple_t *) MP_OBJ_TO_PTR(mp_obj_new_tuple(dtype->len, NULL));
     for (size_t i = 0; i < dtype->len; i++) {
         char d = mp_obj_get_int(dtype->items[i]);
-        r->items[i] = mp_obj_new_str(&d, 1);
+        r->items[i] = d ? mp_obj_new_str(&d, 1) : mp_const_none;
     }
     return r;
 }
@@ -234,6 +301,8 @@ static void py_ml_model_print(const mp_print_t *print, mp_obj_t self_in, mp_prin
     mp_obj_print_helper(print, self->input_zero_point, kind);
     mp_printf(print, ", input_dtype: ");
     mp_obj_print_helper(print, py_ml_dtype_char_tuple(self->input_dtype), kind);
+    mp_printf(print, ", input_layout: ");
+    mp_obj_print_helper(print, self->input_layout, kind);
     mp_printf(print, ", output_shape: ");
     mp_obj_print_helper(print, self->output_shape, kind);
     mp_printf(print, ", output_scale: ");
@@ -265,7 +334,7 @@ static mp_obj_t py_ml_model_predict(size_t n_args, const mp_obj_t *pos_args, mp_
     bool postprocess = model->postprocess != mp_const_none || callback;
 
     py_ml_process_input(model, pos_args[1]);
-    ml_backend_run_inference(model);
+    model->backend->run_inference(model);
 
     mp_obj_t output = py_ml_process_output(model, !postprocess);
 
@@ -295,6 +364,9 @@ static void py_ml_model_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest) {
                 break;
             case MP_QSTR_input_dtype:
                 dest[0] = py_ml_dtype_char_tuple(self->input_dtype);
+                break;
+            case MP_QSTR_input_layout:
+                dest[0] = MP_OBJ_FROM_PTR(self->input_layout);
                 break;
             case MP_QSTR_input_scale:
                 dest[0] = MP_OBJ_FROM_PTR(self->input_scale);
@@ -341,6 +413,7 @@ mp_obj_t py_ml_model_make_new(const mp_obj_type_t *type, size_t n_args, size_t n
     model->postprocess = args[ARG_postprocess].u_obj;
     // Set by the backend, but the finaliser can run before that on failure.
     model->state = NULL;
+    model->backend = NULL;
 
     #if MICROPY_VFS
     mp_obj_t file_args[2] = {
@@ -397,14 +470,47 @@ mp_obj_t py_ml_model_make_new(const mp_obj_type_t *type, size_t n_args, size_t n
     mp_raise_msg(&mp_type_RuntimeError, MP_ERROR_TEXT("File I/O is not supported"));
     #endif
 
+    // Select the first backend that accepts the model.
+    for (size_t i = 0; i < MP_ARRAY_SIZE(py_ml_backends); i++) {
+        if (py_ml_backends[i]->probe(model->data, model->size)) {
+            model->backend = py_ml_backends[i];
+            break;
+        }
+    }
 
-    ml_backend_init_model(model);
+    if (model->backend == NULL) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Unsupported model format"));
+    }
+
+    // Free the backend's memory right away if initialization fails, instead of when
+    // the model is collected.
+    model->input_layout = NULL;
+    nlr_buf_t nlr;
+    if (nlr_push(&nlr) == 0) {
+        model->backend->init_model(model);
+        nlr_pop();
+    } else {
+        model->backend->deinit_model(model);
+        model->backend = NULL;
+        nlr_jump(nlr.ret_val);
+    }
+
+    // Backends that don't set the input layout use NHWC for 4D inputs.
+    if (model->input_layout == NULL) {
+        model->input_layout = (mp_obj_tuple_t *) MP_OBJ_TO_PTR(mp_obj_new_tuple(model->inputs_size, NULL));
+        for (size_t i = 0; i < model->inputs_size; i++) {
+            mp_obj_tuple_t *shape = MP_OBJ_TO_PTR(model->input_shape->items[i]);
+            model->input_layout->items[i] = py_ml_layout_obj((shape->len == 4) ? "NHWC" : NULL);
+        }
+    }
     return MP_OBJ_FROM_PTR(model);
 }
 
 static mp_obj_t py_ml_model_deinit(mp_obj_t self_in) {
     py_ml_model_obj_t *model = MP_OBJ_TO_PTR(self_in);
-    ml_backend_deinit_model(model);
+    if (model->backend) {
+        model->backend->deinit_model(model);
+    }
     if (!model->managed) {
         uma_free(model->data);
     }

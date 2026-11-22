@@ -116,6 +116,7 @@ include drivers/drivers.mk
 include lib/imlib/imlib.mk
 include lib/apriltag/apriltag.mk
 include lib/tflm/tflm.mk
+include lib/torch/torch.mk
 include ports/ports.mk
 include protocol/protocol.mk
 include common/micropy.mk
