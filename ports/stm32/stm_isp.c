@@ -38,6 +38,22 @@
 #include "board_config.h"
 
 #ifdef DCMIPP
+// The gains and CCM last written to the ISP, which the AWB stats undo in the next frame.
+static omv_csi_stats_xform_t stm_isp_xform;
+
+static void stm_isp_reset_xform(void) {
+    memset(&stm_isp_xform, 0, sizeof(stm_isp_xform));
+    for (int i = 0; i < 3; i++) {
+        stm_isp_xform.gains[i] = 1.0f;
+    }
+    stm_isp_xform.gamma = 1.0f;
+}
+
+// RGB565 frames measure the AWB from their pixels, skipping clipped ones. Other formats use the ISP's averages.
+static bool stm_isp_image_stats(omv_csi_t *csi) {
+    return csi->pixformat == PIXFORMAT_RGB565;
+}
+
 #ifdef OMV_CSI_HW_CCM_ENABLE
 // Matrix3x3_Coeff: 11-bit signed, 2 int + 8 dec -> 1.0 = 256.
 // Added3x1_Coeff:  10-bit signed, 9 int + 0 dec -> 1.0 = 1.
@@ -56,6 +72,10 @@ static void stm_isp_update_ccm(omv_csi_t *csi, uint32_t pipe, const float avg[3]
     if (!omv_csi_ccm_compute(csi->ccm, avg, luminance, &ccm)) {
         return;
     }
+
+    stm_isp_xform.ccm_valid = true;
+    memcpy(stm_isp_xform.ccm, ccm.coeffs, sizeof(stm_isp_xform.ccm));
+    memcpy(stm_isp_xform.offsets, ccm.offsets, sizeof(stm_isp_xform.offsets));
 
     for (int r = 0; r < 3; r++) {
         float sum = 0.0f;
@@ -98,6 +118,18 @@ static void stm_isp_update_ccm(omv_csi_t *csi, uint32_t pipe, const float avg[3]
 }
 #endif // OMV_CSI_HW_CCM_ENABLE
 
+// Measures the AWB from a captured frame, before the ISP settings change for the next one.
+void stm_isp_update_stats(omv_csi_t *csi, const image_t *image) {
+    // The ISP's averages initialize the stats (see stm_csi_frame_event).
+    if (!csi->stats_enabled || !csi->stats.initialized || !stm_isp_image_stats(csi)) {
+        return;
+    }
+
+    // The gamma table is only loaded for MIPI sensors (see stm_csi_isp_reset).
+    stm_isp_xform.gamma = csi->mipi_if ? STM_ISP_GAMMA : 1.0f;
+    omv_csi_stats_update_image(csi, image, &stm_isp_xform, mp_hal_ticks_ms());
+}
+
 float stm_isp_update_awb(omv_csi_t *csi, uint32_t pipe) {
     uint32_t avg[3];
     float gain[3];
@@ -122,11 +154,19 @@ float stm_isp_update_awb(omv_csi_t *csi, uint32_t pipe) {
     // Compute raw (un-smoothed) luminance for AEC before the EMA filter.
     luminance = avg[0] * 0.299f + avg[1] * 0.587f + avg[2] * 0.114f;
 
-    if (csi->stats_enabled) {
+    // Once initialized, RGB565 frames are measured from their pixels (see stm_isp_update_stats).
+    if (csi->stats_enabled && (!csi->stats.initialized || !stm_isp_image_stats(csi))) {
         omv_csi_stats_update(csi, &avg[0], &avg[1], &avg[2], mp_hal_ticks_ms());
     }
 
     omv_csi_stats_get_gains(csi, &gain[0], &gain[1], &gain[2]);
+
+    for (int i = 0; i < 3; i++) {
+        stm_isp_xform.gains[i] = gain[i];
+    }
+
+    // The CCM block only stays enabled while stm_isp_update_ccm() updates it.
+    stm_isp_xform.ccm_valid = false;
 
     // Calculate the exposure factors for each channel (R, G, B)
     for (int i = 0; i < 3; i++) {
@@ -163,6 +203,9 @@ float stm_isp_update_awb(omv_csi_t *csi, uint32_t pipe) {
 }
 
 int stm_isp_init(omv_csi_t *csi, uint32_t pipe, pixformat_t pixformat, bool raw_output) {
+    // The exposure gains are reset to unity and the CCM is disabled below.
+    stm_isp_reset_xform();
+
     // Configure the pixel processing pipeline.
     DCMIPP_PipeConfTypeDef pcfg = {
         .FrameRate = DCMIPP_FRAME_RATE_ALL
