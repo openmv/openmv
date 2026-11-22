@@ -82,6 +82,26 @@
 #define OMV_CSI_STATS_GAIN_MAX  (128.0f)
 #endif
 
+// Pixels with any channel at or above this are clipped, so their color is unknown.
+#ifndef OMV_CSI_STATS_CLIP
+#define OMV_CSI_STATS_CLIP          (245)
+#endif
+
+// Pixels with any channel below this are too noisy, or were clamped by the CCM, so their color is unknown.
+#ifndef OMV_CSI_STATS_DARK
+#define OMV_CSI_STATS_DARK          (16)
+#endif
+
+// Pixels sampled from each image, at most ~65k so the 32-bit AWB sums can't overflow.
+#ifndef OMV_CSI_STATS_SAMPLES
+#define OMV_CSI_STATS_SAMPLES       (16384)
+#endif
+
+// Fraction of the sampled pixels that must be usable to update the averages.
+#ifndef OMV_CSI_STATS_MIN_USABLE
+#define OMV_CSI_STATS_MIN_USABLE    (0.1f)
+#endif
+
 #ifndef __weak
 #define __weak    __attribute__((weak))
 #endif
@@ -1186,36 +1206,156 @@ __weak int omv_csi_get_rgb_gain_db(omv_csi_t *csi, float *r_gain_db, float *g_ga
 }
 
 #if defined(OMV_CSI_STATS_ENABLE)
-void omv_csi_stats_update(omv_csi_t *csi, uint32_t *r, uint32_t *g, uint32_t *b, uint32_t ms) {
-    omv_csi_stats_t *stats = &csi->stats;
-
+static void omv_csi_stats_filter(omv_csi_stats_t *stats, float r, float g, float b, uint32_t ms) {
     if (!stats->initialized) {
         stats->initialized = true;
         stats->last_ms = ms;
-        stats->r_avg = *r;
-        stats->g_avg = *g;
-        stats->b_avg = *b;
+        stats->r_avg = r;
+        stats->g_avg = g;
+        stats->b_avg = b;
     } else {
-        // Freeze the EMA when raw R/G/B ratios collapse above 2/3rds — that means
-        // saturated pixels are pinning all channels equal, which would bias AWB
+        uint32_t dt_ms = ms - stats->last_ms;
+        // Continuous-time EMA gain for elapsed dt: alpha = 1 - exp(-dt / tau)
+        float alpha = IM_CLAMP(1.0f - expf(-((float) dt_ms) / OMV_CSI_STATS_TAU_MS), 0.0f, 1.0f);
+        stats->last_ms = ms;
+        stats->r_avg += alpha * (r - stats->r_avg);
+        stats->g_avg += alpha * (g - stats->g_avg);
+        stats->b_avg += alpha * (b - stats->b_avg);
+    }
+}
+
+void omv_csi_stats_update(omv_csi_t *csi, uint32_t *r, uint32_t *g, uint32_t *b, uint32_t ms) {
+    omv_csi_stats_t *stats = &csi->stats;
+
+    if (stats->initialized) {
+        // Freeze the EMA when raw R/G/B ratios collapse above 2/3rds, which means
+        // saturated pixels are pinning all channels equal. That would bias AWB
         // toward "no correction" and tint unsaturated regions green. AEC still
         // sees live luminance and drops exposure to resolve the saturation.
         uint32_t min = IM_MIN(*r, IM_MIN(*g, *b));
         uint32_t max = IM_MAX(*r, IM_MAX(*g, *b));
 
         if (min * 3 > max * 2) {
+            // Keep the time base current, so that the EMA eases back instead of jumping when it resumes.
+            stats->last_ms = ms;
             return;
         }
-
-        uint32_t dt_ms = ms - stats->last_ms;
-        // Continuous-time EMA gain for elapsed dt: alpha = 1 - exp(-dt/τ)
-        float alpha = IM_CLAMP(1.0f - expf(-((float) dt_ms) / OMV_CSI_STATS_TAU_MS), 0.0f, 1.0f);
-        stats->last_ms = ms;
-        stats->r_avg += alpha * (*r - stats->r_avg);
-        stats->g_avg += alpha * (*g - stats->g_avg);
-        stats->b_avg += alpha * (*b - stats->b_avg);
     }
+
+    omv_csi_stats_filter(stats, *r, *g, *b, ms);
 }
+
+#if defined(OMV_CSI_STATS_IMAGE_ENABLE)
+static bool omv_csi_stats_invert(const float m[3][3], float inv[3][3]) {
+    float c00 = m[1][1] * m[2][2] - m[1][2] * m[2][1];
+    float c01 = m[1][2] * m[2][0] - m[1][0] * m[2][2];
+    float c02 = m[1][0] * m[2][1] - m[1][1] * m[2][0];
+    float det = m[0][0] * c00 + m[0][1] * c01 + m[0][2] * c02;
+
+    if (fabsf(det) < 1e-6f) {
+        return false;
+    }
+
+    float d = 1.0f / det;
+    inv[0][0] = c00 * d;
+    inv[0][1] = (m[0][2] * m[2][1] - m[0][1] * m[2][2]) * d;
+    inv[0][2] = (m[0][1] * m[1][2] - m[0][2] * m[1][1]) * d;
+    inv[1][0] = c01 * d;
+    inv[1][1] = (m[0][0] * m[2][2] - m[0][2] * m[2][0]) * d;
+    inv[1][2] = (m[0][2] * m[1][0] - m[0][0] * m[1][2]) * d;
+    inv[2][0] = c02 * d;
+    inv[2][1] = (m[0][1] * m[2][0] - m[0][0] * m[2][1]) * d;
+    inv[2][2] = (m[0][0] * m[1][1] - m[0][1] * m[1][0]) * d;
+    return true;
+}
+
+bool omv_csi_stats_update_image(omv_csi_t *csi, const image_t *image, uint32_t ms) {
+    omv_csi_stats_t *stats = &csi->stats;
+    const omv_csi_stats_xform_t *xform = &csi->stats_xform;
+
+    if (image->pixfmt != PIXFORMAT_RGB565 || image->data == NULL || image->w == 0 || image->h == 0) {
+        return false;
+    }
+
+    // Undo the CCM and then the gains in one matrix: sensor = a * (pixel - offsets).
+    float a[3][3] = { { 1.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f }, { 0.0f, 0.0f, 1.0f } };
+    float offsets[3] = { 0.0f, 0.0f, 0.0f };
+
+    if (xform->ccm_valid) {
+        if (!omv_csi_stats_invert(xform->ccm, a)) {
+            return false;
+        }
+        memcpy(offsets, xform->offsets, sizeof(offsets));
+    }
+
+    float bias[3];
+    for (int r = 0; r < 3; r++) {
+        float gain = OMV_MAX(xform->gains[r], 1e-3f);
+        for (int c = 0; c < 3; c++) {
+            a[r][c] /= gain;
+        }
+        bias[r] = a[r][0] * offsets[0] + a[r][1] * offsets[1] + a[r][2] * offsets[2];
+    }
+
+    // Gamma scales each pixel by (Y_in / 255)^(1 / gamma - 1), where Y_in is its luminance before gamma.
+    // That keeps its color ratios, and is undone by scaling it by (Y / 255)^(gamma - 1) of its luminance after.
+    // The weights are 8-bit fixed point, so the sums stay integers.
+    uint16_t linear[256];
+    for (int i = 0; i < 256; i++) {
+        linear[i] = xform->gamma == 1.0f ? 256 : fast_roundf(256.0f * powf(i / 255.0f, xform->gamma - 1.0f));
+    }
+
+    // Pixels are sampled on a grid spread evenly over the image.
+    int step = 1;
+    while ((image->w / step) * (image->h / step) > OMV_CSI_STATS_SAMPLES) {
+        step++;
+    }
+
+    // Each weighted channel is at most 255 * 256, so the sums can't overflow for the samples taken.
+    uint32_t sum[3] = { 0, 0, 0 };
+    uint32_t total = 0;
+    uint32_t usable = 0;
+
+    for (int y = step / 2; y < image->h; y += step) {
+        uint16_t *row = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(image, y);
+
+        for (int x = step / 2; x < image->w; x += step) {
+            uint16_t pixel = IMAGE_GET_RGB565_PIXEL_FAST(row, x);
+            int r = COLOR_RGB565_TO_R8(pixel);
+            int g = COLOR_RGB565_TO_G8(pixel);
+            int b = COLOR_RGB565_TO_B8(pixel);
+            total++;
+
+            // A pixel clipped or too dark in any channel has an unknown color, so it's skipped as a whole.
+            if (r >= OMV_CSI_STATS_CLIP || g >= OMV_CSI_STATS_CLIP || b >= OMV_CSI_STATS_CLIP ||
+                r < OMV_CSI_STATS_DARK || g < OMV_CSI_STATS_DARK || b < OMV_CSI_STATS_DARK) {
+                continue;
+            }
+
+            uint32_t w = linear[COLOR_RGB888_TO_Y(r, g, b)];
+            sum[0] += r * w;
+            sum[1] += g * w;
+            sum[2] += b * w;
+            usable++;
+        }
+    }
+
+    // Hold the averages when most of the image is clipped or dark, keeping the time base current.
+    if (usable == 0 || usable < total * OMV_CSI_STATS_MIN_USABLE) {
+        stats->last_ms = ms;
+        return false;
+    }
+
+    // The undo is linear, so it's applied once to the mean instead of to every pixel.
+    float mean[3];
+    for (int i = 0; i < 3; i++) {
+        mean[i] = (a[i][0] * sum[0] + a[i][1] * sum[1] + a[i][2] * sum[2]) / (usable * 256.0f) - bias[i];
+    }
+
+    omv_csi_stats_filter(stats, OMV_MAX(mean[0], 1.0f), OMV_MAX(mean[1], 1.0f), OMV_MAX(mean[2], 1.0f), ms);
+    return true;
+}
+#endif // defined(OMV_CSI_STATS_IMAGE_ENABLE)
 
 void omv_csi_stats_get(omv_csi_t *csi, float *r, float *g, float *b) {
     omv_csi_stats_t *stats = &csi->stats;
