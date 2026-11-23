@@ -45,6 +45,7 @@
 #include "framebuffer.h"
 #include "memcpy.h"
 #include "sensor_config.h"
+#include "simd.h"
 
 #ifndef OMV_CSI_RESET_DELAY
 #define OMV_CSI_RESET_DELAY (10)
@@ -1314,31 +1315,43 @@ bool omv_csi_stats_update_image(omv_csi_t *csi, const image_t *image, uint32_t m
     // Each weighted channel is at most 255 * 256, so the sums can't overflow for the samples taken.
     uint32_t sum[3] = { 0, 0, 0 };
     uint32_t total = 0;
-    uint32_t usable = 0;
+    int32_t usable = 0;
+    int n = (image->w - step / 2 + step - 1) / step;
+
+    // The gathered columns are the same for every vector, so only the base moves.
+    v128_t columns = vmla_n_u16(vidup_u16(0, 1), step, vdup_u16(step / 2));
 
     for (int y = step / 2; y < image->h; y += step) {
-        uint16_t *row = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(image, y);
+        const uint16_t *row = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(image, y);
+        total += n;
 
-        for (int x = step / 2; x < image->w; x += step) {
-            uint16_t pixel = IMAGE_GET_RGB565_PIXEL_FAST(row, x);
-            int r = COLOR_RGB565_TO_R8(pixel);
-            int g = COLOR_RGB565_TO_G8(pixel);
-            int b = COLOR_RGB565_TO_B8(pixel);
-            total++;
+        for (int i = 0; i < n; i += UINT16_VECTOR_SIZE) {
+            v128_predicate_t pred = vpredicate_16(n - i);
+            vrgb_pixels_t pixels = vrgb_rgb565_to_pixels888(vldr_u16_gather_pred(row + i * step, columns, pred));
 
-            // A pixel clipped or too dark in any channel has an unknown color, so it's skipped as a whole.
-            if (r >= OMV_CSI_STATS_CLIP || g >= OMV_CSI_STATS_CLIP || b >= OMV_CSI_STATS_CLIP ||
-                r < OMV_CSI_STATS_DARK || g < OMV_CSI_STATS_DARK || b < OMV_CSI_STATS_DARK) {
-                continue;
-            }
+            // The conversion leaves the neighboring pixel's bits above each 8-bit channel.
+            v128_t r = vand_u32(pixels.r, vdup_u16(0xFF));
+            v128_t g = vand_u32(pixels.g, vdup_u16(0xFF));
+            v128_t b = vand_u32(pixels.b, vdup_u16(0xFF));
 
-            uint32_t w = linear[COLOR_RGB888_TO_Y(r, g, b)];
-            sum[0] += r * w;
-            sum[1] += g * w;
-            sum[2] += b * w;
-            usable++;
+            // A pixel clipped or too dark in any channel has an unknown color, so its weight is zeroed.
+            // The inactive lanes are zero, so they're too dark.
+            v128_t min = vmin_u16(vmin_u16(r, g), b);
+            v128_t max = vmax_u16(vmax_u16(r, g), b);
+            v128_t mask = vand_u32(vcmp_ge_n_u16(min, OMV_CSI_STATS_DARK), vcmp_lt_n_u16(max, OMV_CSI_STATS_CLIP));
+
+            v128_t luma = vand_u32(vrgb_pixels_to_grayscale((vrgb_pixels_t) { r, g, b }), vdup_u16(0xFF));
+            v128_t w = vand_u32(vldr_u16_gather_pred(linear, luma, pred), mask);
+
+            sum[0] = vmladava_u16(r, w, sum[0]);
+            sum[1] = vmladava_u16(g, w, sum[1]);
+            sum[2] = vmladava_u16(b, w, sum[2]);
+            usable = vaddva_s16(mask, usable);
         }
     }
+
+    // The usable lanes of the mask are -1, so the sum is the negated count.
+    usable = -usable;
 
     // Hold the averages when most of the image is clipped or dark, keeping the time base current.
     if (usable == 0 || usable < total * OMV_CSI_STATS_MIN_USABLE) {

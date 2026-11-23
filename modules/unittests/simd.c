@@ -1063,6 +1063,16 @@ static mp_obj_t test_simd_vmladav(void) {
         return mp_const_false;
     }
 
+    // vaddva_s16: accumulate the sum of s16 lanes
+    a = vdup_s16(-3);
+    a = vset_s16(a, 0, 7);
+
+    // acc=10, 7 + (-3) * (lanes - 1)
+    sresult = vaddva_s16(a, 10);
+    if (sresult != 10 + 7 - 3 * (UINT16_VECTOR_SIZE - 1)) {
+        return mp_const_false;
+    }
+
     return mp_const_true;
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(test_simd_vmladav_obj, test_simd_vmladav);
@@ -1140,6 +1150,67 @@ static mp_obj_t test_simd_vcvt(void) {
 static MP_DEFINE_CONST_FUN_OBJ_0(test_simd_vcvt_obj, test_simd_vcvt);
 
 // Test min/max operations
+// vmin_u16, vmax_u16, vcmp_ge_n_u16, vcmp_lt_n_u16 and vldr_u16_gather_pred work per lane.
+static mp_obj_t test_simd_u16_select(void) {
+    uint16_t a[UINT16_VECTOR_SIZE];
+    uint16_t b[UINT16_VECTOR_SIZE];
+    uint16_t out[UINT16_VECTOR_SIZE];
+    uint16_t offsets[UINT16_VECTOR_SIZE];
+    uint16_t table[64];
+
+    for (int i = 0; i < UINT16_VECTOR_SIZE; i++) {
+        a[i] = i * 1000;
+        b[i] = 3000;
+        offsets[i] = 63 - i * 7;
+    }
+    for (int i = 0; i < 64; i++) {
+        table[i] = i * 3 + 1;
+    }
+
+    v128_t va = vldr_u16(a);
+    v128_t vb = vldr_u16(b);
+
+    vstr_u16(out, vmin_u16(va, vb));
+    for (int i = 0; i < UINT16_VECTOR_SIZE; i++) {
+        if (out[i] != OMV_MIN(a[i], b[i])) {
+            return mp_const_false;
+        }
+    }
+
+    vstr_u16(out, vmax_u16(va, vb));
+    for (int i = 0; i < UINT16_VECTOR_SIZE; i++) {
+        if (out[i] != OMV_MAX(a[i], b[i])) {
+            return mp_const_false;
+        }
+    }
+
+    vstr_u16(out, vcmp_ge_n_u16(va, 1000));
+    for (int i = 0; i < UINT16_VECTOR_SIZE; i++) {
+        if (out[i] != (a[i] >= 1000 ? 0xFFFF : 0)) {
+            return mp_const_false;
+        }
+    }
+
+    vstr_u16(out, vcmp_lt_n_u16(va, 1000));
+    for (int i = 0; i < UINT16_VECTOR_SIZE; i++) {
+        if (out[i] != (a[i] < 1000 ? 0xFFFF : 0)) {
+            return mp_const_false;
+        }
+    }
+
+    // Only the active lanes are gathered, and the rest are zero.
+    int active = UINT16_VECTOR_SIZE - 1;
+    vstr_u16(out, vldr_u16_gather_pred(table, vldr_u16(offsets), vpredicate_16(active)));
+    for (int i = 0; i < UINT16_VECTOR_SIZE; i++) {
+        if (out[i] != (i < active ? table[offsets[i]] : 0)) {
+            return mp_const_false;
+        }
+    }
+
+    return mp_const_true;
+}
+static MP_DEFINE_CONST_FUN_OBJ_0(test_simd_u16_select_obj, test_simd_u16_select);
+
 static mp_obj_t test_simd_vminmax(void) {
     // vminv_f32_pred: find minimum across vector elements
     v128_t v = vdup_u32(0);
@@ -2051,6 +2122,7 @@ static const mp_rom_map_elem_t unittest_simd_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_test_simd_vmladav), MP_ROM_PTR(&test_simd_vmladav_obj) },
     { MP_ROM_QSTR(MP_QSTR_test_simd_vcvt), MP_ROM_PTR(&test_simd_vcvt_obj) },
     { MP_ROM_QSTR(MP_QSTR_test_simd_vminmax), MP_ROM_PTR(&test_simd_vminmax_obj) },
+    { MP_ROM_QSTR(MP_QSTR_test_simd_u16_select), MP_ROM_PTR(&test_simd_u16_select_obj) },
     { MP_ROM_QSTR(MP_QSTR_test_simd_predicate), MP_ROM_PTR(&test_simd_predicate_obj) },
     { MP_ROM_QSTR(MP_QSTR_test_simd_vldr_vstr), MP_ROM_PTR(&test_simd_vldr_vstr_obj) },
     { MP_ROM_QSTR(MP_QSTR_test_simd_vld2_vst2), MP_ROM_PTR(&test_simd_vld2_vst2_obj) },
