@@ -32,3 +32,6 @@
 [submodule "lib/alif-dfp"]
 	path = lib/alif-dfp
 	url = https://github.com/openmv/alif_ensemble-cmsis-dfp.git
+[submodule "lib/cmsis/src/dsp"]
+	path = lib/cmsis/src/dsp
+	url = https://github.com/ARM-software/CMSIS-DSP.git
