@@ -40,6 +40,7 @@
 #if OMV_BOOT_SPI_FLASH_ENABLE
 #include "gpio.h"
 #include "pinconf.h"
+#include "sys_clocks.h"
 #include "ospi_private.h"
 
 #define OSPI_INST_0BIT      (0x00U)

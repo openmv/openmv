@@ -29,3 +29,6 @@
 [submodule "lib/torch/libtorch"]
 	path = lib/torch/libtorch
 	url = https://github.com/openmv/libtorch.git
+[submodule "lib/alif-dfp"]
+	path = lib/alif-dfp
+	url = https://github.com/openmv/alif_ensemble-cmsis-dfp.git

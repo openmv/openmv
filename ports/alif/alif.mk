@@ -37,7 +37,8 @@ FIRMWARE := $(FIRMWARE)_$(MCU_CORE)
 DAVE2D_DIR=drivers/dave2d
 CORE_M55_HP := $(if $(filter M55_HP,$(MCU_CORE)),1,0)
 CPU_FREQ_HZ := $($(MCU_CORE)_CPU_FREQ_HZ)
-CMSIS_MCU_H := '<system_utils.h>'
+CMSIS_MCU_H := '<sys_utils.h>'
+ALIF_CMSIS_H := '"alif.h"'
 
 ROMFS_CONFIG := $(OMV_BOARD_CONFIG_DIR)/romfs_config.json
 ROMFS_PART := $(if $(filter M55_HP,$(MCU_CORE)),0,1)
@@ -71,7 +72,7 @@ CFLAGS += -D__VFP_FP__ \
           -DETHOSU_MULTI_VARIANT \
           -DPINS_AF_H=$(PINS_AF_H) \
           -DCMSIS_MCU_H=$(CMSIS_MCU_H) \
-          -DALIF_CMSIS_H=$(CMSIS_MCU_H) \
+          -DALIF_CMSIS_H=$(ALIF_CMSIS_H) \
           -DOMV_CPU_FREQ_HZ=$(CPU_FREQ_HZ) \
           -DOMV_NOSYS_STUBS_ENABLE=1 \
           -DTUSB_ALIF_NO_IRQ_CFG \
@@ -94,7 +95,7 @@ CLANG_FLAGS = -fshort-enums \
               -Wno-ignored-optimization-argument \
               -Wno-unused-command-line-argument \
               -D__ARMCC_VERSION=6100100 \
-              -DALIF_CMSIS_H=$(CMSIS_MCU_H) \
+              -DALIF_CMSIS_H=$(ALIF_CMSIS_H) \
               $(filter-out -march% -fdisable-rtl%,$(CFLAGS))
 
 OMV_CFLAGS += -I$(TOP_DIR)
@@ -160,7 +161,7 @@ endif
 
 # Firmware objects from .mk files.
 include lib/cmsis/cmsis.mk
-include lib/alif/alif.mk
+include $(HAL_DIR)/alif.mk
 include common/common.mk
 include protocol/protocol.mk
 include drivers/drivers.mk

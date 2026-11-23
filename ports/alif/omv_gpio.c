@@ -50,6 +50,16 @@ static inline GPIO_Type *omv_gpio_get_base(omv_gpio_t pin) {
     return gpio;
 }
 
+// Enable the clock of the pin's GPIO port, on parts where it is gated.
+// LPGPIO (port 15) has no clock gate.
+static inline void omv_gpio_enable_clock(omv_gpio_t pin) {
+    #if SOC_FEAT_GPIO_HAS_CLOCK_ENABLE
+    if (pin->port < OMV_ARRAY_SIZE(CLKCTL_PER_SLV->GPIO_CTRL)) {
+        CLKCTL_PER_SLV->GPIO_CTRL[pin->port] |= (1U << 16);
+    }
+    #endif
+}
+
 void omv_gpio_config(omv_gpio_t pin, uint32_t mode, uint32_t pull, uint32_t speed, uint32_t af) {
     GPIO_Type *gpio = omv_gpio_get_base(pin);
     uint16_t pad_config = (mode | pull | speed | pin->ren) & 0xFF;
@@ -72,11 +82,13 @@ void omv_gpio_config(omv_gpio_t pin, uint32_t mode, uint32_t pull, uint32_t spee
             break;
         }
         case OMV_GPIO_MODE_INPUT: {
+            omv_gpio_enable_clock(pin);
             gpio_set_direction_input(gpio, pin->pin);
             break;
         }
         case OMV_GPIO_MODE_OUTPUT:
         case OMV_GPIO_MODE_OUTPUT_OD: {
+            omv_gpio_enable_clock(pin);
             gpio_set_direction_output(gpio, pin->pin);
             break;
         }

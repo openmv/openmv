@@ -213,7 +213,7 @@ int omv_i2c_deinit(omv_i2c_t *i2c) {
 int omv_i2c_scan(omv_i2c_t *i2c, uint8_t *list, uint8_t size) {
     uint32_t idx = 0;
 
-    for (uint8_t addr = 0x29, data = 0; addr < 0x78; addr++) {
+    for (uint8_t addr = 0x09, data = 0; addr < 0x78; addr++) {
         i2c_transfer_t xfer = {
             .data = &data,
             .size = 1,
@@ -285,6 +285,8 @@ static int i2c_poll_flags(I2C_Type *base, uint32_t flags, uint32_t timeout) {
 
 static int omv_i2c_transfer_timeout(omv_i2c_t *i2c, i2c_transfer_t *xfer, uint32_t timeout) {
     I2C_Type *base = i2c->inst;
+    size_t tx_size = (xfer->direction == I2C_TRANSFER_WRITE) ? xfer->size : 0;
+    size_t rx_size = (xfer->direction == I2C_TRANSFER_READ) ? xfer->size : 0;
 
     i2c_clear_all_interrupt(base);
     i2c_set_target_addr(base, xfer->address, I2C_7BIT_ADDRESS, 0);
@@ -296,7 +298,11 @@ static int omv_i2c_transfer_timeout(omv_i2c_t *i2c, i2c_transfer_t *xfer, uint32
     mp_uint_t tick_start = mp_hal_ticks_ms();
     for (size_t cw_idx = 0; cw_idx < i2c->cw_size;) {
         if (base->I2C_STATUS & I2C_IC_STATUS_TFNF) {
-            base->I2C_DATA_CMD = (uint16_t) i2c->cw_buf[cw_idx++];
+            uint16_t cmd = i2c->cw_buf[cw_idx++];
+            if (cw_idx == i2c->cw_size && tx_size == 0 && rx_size == 0) {
+                cmd |= I2C_IC_DATA_CMD_STOP;
+            }
+            base->I2C_DATA_CMD = cmd;
             I2C_CHECK_ERRORS(base);
             tick_start = mp_hal_ticks_ms();
         }
@@ -305,11 +311,14 @@ static int omv_i2c_transfer_timeout(omv_i2c_t *i2c, i2c_transfer_t *xfer, uint32
         }
     }
 
-    size_t tx_size = (xfer->direction == I2C_TRANSFER_WRITE) ? xfer->size : 0;
     tick_start = mp_hal_ticks_ms();
     for (size_t tx_idx = 0; tx_idx < tx_size;) {
         if (base->I2C_STATUS & I2C_IC_STATUS_TFNF) {
-            base->I2C_DATA_CMD = (uint16_t) xfer->data[tx_idx++];
+            uint16_t cmd = xfer->data[tx_idx++];
+            if (tx_idx == tx_size && rx_size == 0) {
+                cmd |= I2C_IC_DATA_CMD_STOP;
+            }
+            base->I2C_DATA_CMD = cmd;
             I2C_CHECK_ERRORS(base);
             tick_start = mp_hal_ticks_ms();
         }
@@ -324,13 +333,12 @@ static int omv_i2c_transfer_timeout(omv_i2c_t *i2c, i2c_transfer_t *xfer, uint32
     }
 
     // Pipeline read commands as fast as FIFO allows.
-    size_t rx_size = (xfer->direction == I2C_TRANSFER_READ) ? xfer->size : 0;
     tick_start = mp_hal_ticks_ms();
     for (size_t tx_idx = 0, rx_idx = 0; rx_idx < rx_size;) {
         if (tx_idx < rx_size && (base->I2C_STATUS & I2C_IC_STATUS_TFNF)) {
-            base->I2C_DATA_CMD = I2C_IC_DATA_CMD_READ_REQ;
-            I2C_CHECK_ERRORS(base);
             ++tx_idx;
+            base->I2C_DATA_CMD = I2C_IC_DATA_CMD_READ_REQ | ((tx_idx == rx_size) ? I2C_IC_DATA_CMD_STOP : 0);
+            I2C_CHECK_ERRORS(base);
         }
 
         while (rx_idx < rx_size && (base->I2C_STATUS & I2C_IC_STATUS_RFNE)) {

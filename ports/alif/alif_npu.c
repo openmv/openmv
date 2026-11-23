@@ -49,9 +49,9 @@
 #define ETHOSU_CACHE_SIZE       (0)
 #define ETHOSU_CACHE_ALIGN      (16)
 
-#define ETHOSU_IRQ_NUMBER       LOCAL_NPU_IRQ_IRQn
-#define ETHOSU_IRQ_HANDLER      LOCAL_NPU_IRQHandler
-#define ETHOSU_BASE_ADDRESS     (void *) LOCAL_NPU_BASE
+#define ETHOSU_IRQ_NUMBER       NPULOCAL_IRQ_IRQn
+#define ETHOSU_IRQ_HANDLER      NPULOCAL_IRQHandler
+#define ETHOSU_BASE_ADDRESS     (void *) NPULOCAL_BASE
 
 // The driver creates a semaphore per driver (NPU IRQ) and one per NPU variant
 // (driver reservation), so two for the single NPU used by each core.
@@ -134,7 +134,7 @@ void ethosu_semaphore_destroy(void *sem) {
 
 static inline bool is_mram(const void *p, size_t bytes) {
     uintptr_t addr = (uintptr_t) p;
-    return addr >= MRAM_BASE && addr + bytes <= MRAM_BASE + MRAM_SIZE;
+    return addr >= SOC_FEAT_MRAM_BASE && addr + bytes <= SOC_FEAT_MRAM_BASE + SOC_FEAT_MRAM_SIZE;
 }
 
 void ethosu_flush_dcache(const uint64_t *base_addr, const size_t *base_addr_size, int num_base_addr) {

@@ -36,7 +36,7 @@
 #include <stdbool.h>
 #include "dma_ctrl.h"
 #include "dma_op.h"
-#include "dma_mapping.h"
+#include "soc_dma_map.h"
 
 typedef enum {
     DMA_BSWAP_NONE,

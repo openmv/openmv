@@ -38,6 +38,7 @@
 
 #include "py/mphal.h"
 #include "alif_hal.h"
+#include "sys_ctrl_i2c.h"
 #include "sys_ctrl_i3c.h"
 #include "sys_ctrl_spi.h"
 #include "sys_ctrl_cpi.h"
@@ -72,7 +73,7 @@ extern void __fatal_error(const char *msg);
 
 void alif_hal_init(void) {
     // Disable BOR.
-    ANA_REG->VBAT_ANA_REG1 |= (1 << 25);
+    ANA->VBAT_ANA_REG1 |= (1 << 25);
 
     // Disable USB mux.
     #if CORE_M55_HP && defined(OMV_USB_SWITCH_PIN)
@@ -118,7 +119,7 @@ int alif_hal_i2c_init(uint32_t bus_id) {
     switch (bus_id) {
         #if defined(OMV_I3C0_ID)
         case OMV_I3C0_ID: {
-            enable_i3c_clock();
+            enable_i3c_clock(I3C_INSTANCE_0);
             scl_pin = OMV_I3C0_SCL_PIN;
             sda_pin = OMV_I3C0_SDA_PIN;
             break;
@@ -128,6 +129,7 @@ int alif_hal_i2c_init(uint32_t bus_id) {
         case OMV_I2C0_ID: {
             scl_pin = OMV_I2C0_SCL_PIN;
             sda_pin = OMV_I2C0_SDA_PIN;
+            enable_i2c_clock(I2C_INSTANCE_0);
             break;
         }
         #endif
@@ -135,6 +137,7 @@ int alif_hal_i2c_init(uint32_t bus_id) {
         case OMV_I2C1_ID: {
             scl_pin = OMV_I2C1_SCL_PIN;
             sda_pin = OMV_I2C1_SDA_PIN;
+            enable_i2c_clock(I2C_INSTANCE_1);
             break;
         }
         #endif
@@ -142,6 +145,7 @@ int alif_hal_i2c_init(uint32_t bus_id) {
         case OMV_I2C2_ID: {
             scl_pin = OMV_I2C2_SCL_PIN;
             sda_pin = OMV_I2C2_SDA_PIN;
+            enable_i2c_clock(I2C_INSTANCE_2);
             break;
         }
         #endif
@@ -149,6 +153,7 @@ int alif_hal_i2c_init(uint32_t bus_id) {
         case OMV_I2C3_ID: {
             scl_pin = OMV_I2C3_SCL_PIN;
             sda_pin = OMV_I2C3_SDA_PIN;
+            enable_i2c_clock(I2C_INSTANCE_3);
             break;
         }
         #endif
@@ -405,7 +410,7 @@ int alif_hal_csi_init(CPI_Type *cpi) {
 }
 
 void alif_hal_mpu_init(void) {
-    static const ARM_MPU_Region_t MPU_CONFIG_TABLE[] __STARTUP_RO_DATA_ATTRIBUTE = {
+    static const ARM_MPU_Region_t MPU_CONFIG_TABLE[] = {
         [MPU_REGION_SRAM0] = {   /* SRAM0 : RO-0, NP-1, XN-0 */
             .RBAR = ARM_MPU_RBAR(OMV_SRAM0_ORIGIN, ARM_MPU_SH_NON, 0, 1, 0),
             .RLAR = ARM_MPU_RLAR(OMV_SRAM0_ORIGIN + OMV_SRAM0_LENGTH - 1, MPU_ATTR_NORMAL_WB_RA_WA)
@@ -528,8 +533,8 @@ void mpu_config_mram(bool read_only) {
     ARM_MPU_Disable();
 
     MPU->RNR = MPU_REGION_MRAM;
-    MPU->RBAR = ARM_MPU_RBAR(MRAM_BASE, ARM_MPU_SH_NON, read_only, 1, 0);
-    MPU->RLAR = ARM_MPU_RLAR(MRAM_BASE + MRAM_SIZE - 1, MPU_ATTR_NORMAL_WT_RA);
+    MPU->RBAR = ARM_MPU_RBAR(SOC_FEAT_MRAM_BASE, ARM_MPU_SH_NON, read_only, 1, 0);
+    MPU->RLAR = ARM_MPU_RLAR(SOC_FEAT_MRAM_BASE + SOC_FEAT_MRAM_SIZE - 1, MPU_ATTR_NORMAL_WT_RA);
 
     // Re-enable MPU
     ARM_MPU_Enable(MPU_CTRL_PRIVDEFENA_Msk | MPU_CTRL_HFNMIENA_Msk);

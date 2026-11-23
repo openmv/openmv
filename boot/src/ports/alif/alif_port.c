@@ -178,7 +178,7 @@ void MPU_Load_Regions(void) {
 }
 
 void port_mpu_load_defaults() {
-    static const ARM_MPU_Region_t mpu_table[] __STARTUP_RO_DATA_ATTRIBUTE = {
+    static const ARM_MPU_Region_t mpu_table[] = {
         {   /* SRAM0 : RO-0, NP-1, XN-0 */
             .RBAR = ARM_MPU_RBAR(OMV_SRAM0_ORIGIN, ARM_MPU_SH_NON, 0, 1, 0),
             .RLAR = ARM_MPU_RLAR(OMV_SRAM0_ORIGIN + OMV_SRAM0_LENGTH - 1, MEMATTR_NORMAL_RA)
