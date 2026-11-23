@@ -31,12 +31,27 @@ ifneq ($(SYSTEM),)
 CMSIS_SRC_C += cmsis/src/$(SYSTEM).c
 endif
 
-CMSIS_SRC_C += $(addprefix cmsis/src/dsp/,\
+CMSIS_SRC_C += $(addprefix cmsis/src/dsp/Source/,\
 	CommonTables/CommonTables.c \
 	CommonTables/CommonTablesF16.c \
 	FastMathFunctions/FastMathFunctions.c \
 	FastMathFunctions/FastMathFunctionsF16.c \
 )
+
+# CMSIS-DSP real FFT and vector math, used for ML audio features.
+ifneq ($(filter 1,$(MICROPY_PY_ML_TFLM) $(MICROPY_PY_ML_TORCH)),)
+CMSIS_SRC_C += $(addprefix cmsis/src/dsp/Source/,\
+	TransformFunctions/arm_rfft_fast_f32.c \
+	TransformFunctions/arm_rfft_fast_init_f32.c \
+	TransformFunctions/arm_cfft_f32.c \
+	TransformFunctions/arm_cfft_init_f32.c \
+	TransformFunctions/arm_cfft_radix8_f32.c \
+	TransformFunctions/arm_bitreversal2.c \
+	BasicMathFunctions/arm_mult_f32.c \
+	BasicMathFunctions/arm_dot_prod_f32.c \
+	ComplexMathFunctions/arm_cmplx_mag_squared_f32.c \
+)
+endif
 
 # CMSIS-NN, used by the ML backends. The float kernels are not used.
 ifneq ($(filter 1,$(MICROPY_PY_ML_TFLM) $(MICROPY_PY_ML_TORCH)),)
@@ -45,6 +60,8 @@ CMSIS_SRC_C += $(filter-out %_f16.c %_f32.c %/arm_nntables_flt.c, \
 endif
 
 HAL_CFLAGS += -I$(TOP_DIR)/lib/cmsis/include
+HAL_CFLAGS += -I$(TOP_DIR)/lib/cmsis/src/dsp/Include
+HAL_CFLAGS += -I$(TOP_DIR)/lib/cmsis/src/dsp/PrivateInclude
 HAL_CFLAGS += -I$(TOP_DIR)/lib/cmsis/include/$(CMSIS_INC)
 HAL_CFLAGS += -I$(TOP_DIR)/lib/cmsis/src/nn/Include
 
