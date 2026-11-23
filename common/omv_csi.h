@@ -516,6 +516,11 @@ typedef struct _omv_csi {
     const omv_csi_ccm_table_t *ccm; // Color correction matrices.
     #endif // OMV_CSI_HW_CCM_ENABLE
 
+    #ifdef OMV_CSI_HW_BLC_ENABLE
+    float blc_slope;            // Black level per unit of linear gain in 8-bit counts (0 if none).
+    uint32_t blc_ms;            // Time the black level was last updated.
+    #endif // OMV_CSI_HW_BLC_ENABLE
+
     // Sensor function pointers
     int (*reset) (omv_csi_t *csi);
     int (*sleep) (omv_csi_t *csi, int enable);

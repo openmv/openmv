@@ -323,6 +323,7 @@
 #define OMV_CSI_STATS_IMAGE_ENABLE          (1)
 #define OMV_CSI_HW_SCALE_ENABLE             (1)
 #define OMV_CSI_HW_CCM_ENABLE               (1)
+#define OMV_CSI_HW_BLC_ENABLE               (1)
 
 #define OMV_CSI_D0_PIN                      (&omv_pin_A1_DCMI)
 #define OMV_CSI_D1_PIN                      (&omv_pin_A10_DCMI)

@@ -1095,6 +1095,11 @@ int pag7936_init(omv_csi_t *csi) {
     csi->ccm = &pag7936_ccm_table;
     #endif // OMV_CSI_HW_CCM_ENABLE
 
+    #ifdef OMV_CSI_HW_BLC_ENABLE
+    // Measured dark floor: ~4-5 counts at 16x gain, ~1-2 at 8x, 0 at 4x and below.
+    csi->blc_slope = 0.3f;
+    #endif // OMV_CSI_HW_BLC_ENABLE
+
     return 0;
 }
 #endif // (OMV_PAG7936_ENABLE == 1)

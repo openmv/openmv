@@ -810,6 +810,10 @@ static int stm_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
             omv_csi_ioctl(csi, OMV_CSI_IOCTL_UPDATE_AGC_AEC, &arg);
         }
 
+        #ifdef OMV_CSI_HW_BLC_ENABLE
+        // Reads the sensor gain, so it's only updated here and not from the frame IRQ.
+        stm_isp_update_black_level(csi, DCMIPP_PIPE);
+        #endif
     }
     #endif
 

@@ -232,6 +232,53 @@ float stm_isp_update_awb(omv_csi_t *csi, uint32_t pipe) {
     return luminance;
 }
 
+#ifdef OMV_CSI_HW_BLC_ENABLE
+// The black level follows the sensor gain, which only needs to be read as often as the AWB settles.
+#define STM_ISP_BLC_PERIOD_MS   (250)
+
+// How far past a rounding boundary the black level must move before it changes.
+#define STM_ISP_BLC_HYSTERESIS  (0.75f)
+
+// The sensor clamps its output at zero, which rectifies the noise around black into a floor that grows with
+// gain. It's subtracted before the AWB gains, which would otherwise tint it.
+void stm_isp_update_black_level(omv_csi_t *csi, uint32_t pipe) {
+    if (csi->blc_slope <= 0.0f || csi->pixformat == PIXFORMAT_BAYER) {
+        return;
+    }
+
+    // The ISP init disables the block, so it's updated right away after that.
+    bool enabled = HAL_DCMIPP_PIPE_IsEnabledISPBlackLevelCalibration(&csi->dcmipp, pipe);
+    uint32_t ms = mp_hal_ticks_ms();
+
+    if (enabled && ms - csi->blc_ms < STM_ISP_BLC_PERIOD_MS) {
+        return;
+    }
+
+    float gain_db;
+    csi->blc_ms = ms;
+    if (omv_csi_get_gain_db(csi, &gain_db) != 0) {
+        return;
+    }
+
+    DCMIPP_BlackLevelConfTypeDef cfg;
+    HAL_DCMIPP_PIPE_GetISPBlackLevelCalibrationConfig(&csi->dcmipp, pipe, &cfg);
+    float level = csi->blc_slope * powf(10.0f, gain_db / 20.0f);
+
+    // Hysteresis keeps a gain that sits on a rounding boundary from toggling the level.
+    if (enabled && fabsf(level - cfg.GreenCompBlackLevel) < STM_ISP_BLC_HYSTERESIS) {
+        return;
+    }
+
+    int rounded = IM_CLAMP(fast_roundf(level), 0, 255);
+    cfg.RedCompBlackLevel = rounded;
+    cfg.GreenCompBlackLevel = rounded;
+    cfg.BlueCompBlackLevel = rounded;
+
+    HAL_DCMIPP_PIPE_SetISPBlackLevelCalibrationConfig(&csi->dcmipp, pipe, &cfg);
+    HAL_DCMIPP_PIPE_EnableISPBlackLevelCalibration(&csi->dcmipp, pipe);
+}
+#endif // OMV_CSI_HW_BLC_ENABLE
+
 int stm_isp_init(omv_csi_t *csi, uint32_t pipe, pixformat_t pixformat, bool raw_output) {
     #if defined(OMV_CSI_STATS_IMAGE_ENABLE)
     // The exposure gains are reset to unity and the CCM is disabled below.
@@ -292,6 +339,9 @@ int stm_isp_init(omv_csi_t *csi, uint32_t pipe, pixformat_t pixformat, bool raw_
 
     // Enabled by the AWB update when the sensor provides color correction matrices.
     HAL_DCMIPP_PIPE_DisableISPColorConversion(&csi->dcmipp, pipe);
+
+    // Enabled by the black level update when the sensor provides a black level slope.
+    HAL_DCMIPP_PIPE_DisableISPBlackLevelCalibration(&csi->dcmipp, pipe);
 
     // Early exit if no debayer is needed.
     if (!raw_output || pixformat == PIXFORMAT_BAYER) {
