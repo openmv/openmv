@@ -94,7 +94,6 @@ CLANG_FLAGS = -fshort-enums \
               -Wno-shift-count-overflow \
               -Wno-ignored-optimization-argument \
               -Wno-unused-command-line-argument \
-              -D__ARMCC_VERSION=6100100 \
               -DALIF_CMSIS_H=$(ALIF_CMSIS_H) \
               $(filter-out -march% -fdisable-rtl%,$(CFLAGS))
 
