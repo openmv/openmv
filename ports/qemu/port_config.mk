@@ -41,7 +41,6 @@ CFLAGS += -std=gnu11 \
 
 CFLAGS += -D$(TARGET) \
           -DQEMU_BUILD \
-          -DARM_NN_TRUNCATE=1 \
           -DCMSIS_MCU_H=$(CMSIS_MCU_H) \
           -DOMV_CPU_FREQ_HZ=$(CPU_FREQ_HZ) \
           $(OMV_BOARD_CFLAGS)

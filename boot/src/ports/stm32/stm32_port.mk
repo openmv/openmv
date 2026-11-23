@@ -69,7 +69,6 @@ LDFLAGS = -mthumb \
 
 CFLAGS += -D$(MCU) \
           -D$(TARGET) \
-          -DARM_NN_TRUNCATE \
           -D__VFP_FP__ \
           -DUSE_DEVICE_MODE \
           -DHSE_VALUE=$(OMV_HSE_VALUE)\

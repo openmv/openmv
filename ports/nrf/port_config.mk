@@ -41,7 +41,6 @@ CFLAGS += -std=gnu11 \
           -ffunction-sections
 
 CFLAGS += -D$(MCU) \
-          -DARM_NN_TRUNCATE \
           -D__FPU_PRESENT=1 \
           -D__VFP_FP__ \
           -D$(TARGET) \

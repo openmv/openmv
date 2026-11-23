@@ -62,7 +62,6 @@ CFLAGS += -D__VFP_FP__ \
           -DCORE_$(MCU_CORE)=1 \
           -D$(ALIF_RTSS_CORE) \
           -D$(ARM_MATH) \
-          -DARM_NN_TRUNCATE \
           -DETHOS_U \
           -DPINS_AF_H=$(PINS_AF_H) \
           -DCMSIS_MCU_H=$(CMSIS_MCU_H) \

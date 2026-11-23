@@ -48,7 +48,6 @@ CFLAGS += -std=gnu11 \
 # TODO: FIX HSE
 CFLAGS += -DCPU_$(MCU) \
           -D$(TARGET) \
-          -DARM_NN_TRUNCATE \
           -D__FPU_PRESENT=1 \
           -D__VFP_FP__ \
           -DHSE_VALUE=$(OMV_HSE_VALUE) \
