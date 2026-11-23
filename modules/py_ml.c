@@ -539,6 +539,7 @@ extern const mp_obj_type_t py_ml_nms_type;
 #if MICROPY_PY_ML_OPS
 extern const mp_obj_fun_builtin_var_t py_ml_convex_upsample_obj;
 extern const mp_obj_fun_builtin_fixed_t py_ml_depth_to_space_obj;
+extern const mp_obj_type_t py_ml_logmel_type;
 #endif
 
 static const mp_rom_map_elem_t py_ml_globals_dict_table[] = {
@@ -547,6 +548,7 @@ static const mp_rom_map_elem_t py_ml_globals_dict_table[] = {
     #if MICROPY_PY_ML_OPS
     { MP_ROM_QSTR(MP_QSTR_convex_upsample),     MP_ROM_PTR(&py_ml_convex_upsample_obj) },
     { MP_ROM_QSTR(MP_QSTR_depth_to_space),      MP_ROM_PTR(&py_ml_depth_to_space_obj) },
+    { MP_ROM_QSTR(MP_QSTR_LogMel),              MP_ROM_PTR(&py_ml_logmel_type) },
     #endif
 };
 

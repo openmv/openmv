@@ -21,7 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  *
- * Machine Learning post-processing operations.
+ * Machine Learning pre- and post-processing operations.
  */
 #include <math.h>
 #include "py/runtime.h"
@@ -32,6 +32,8 @@
 #include "imlib.h"
 #include "py_helper.h"
 #include "simd.h"
+
+#define ML_LOG_MEL_EPS          (1e-6f)
 
 // Returns a dense array of a type, and its last 3 dimensions in h, w and c. Leading
 // dimensions must be 1 (e.g. a batch of 1). A 2D array has c = 1.
@@ -264,4 +266,187 @@ static mp_obj_t py_ml_depth_to_space(mp_obj_t x_obj, mp_obj_t factor_obj) {
     return MP_OBJ_FROM_PTR(out);
 }
 MP_DEFINE_CONST_FUN_OBJ_2(py_ml_depth_to_space_obj, py_ml_depth_to_space);
+
+static ndarray_obj_t *py_ml_audio_ndarray(mp_obj_t obj, uint8_t ndim, const char *name) {
+    if (!mp_obj_is_type(obj, &ulab_ndarray_type)) {
+        mp_raise_msg_varg(&mp_type_TypeError, MP_ERROR_TEXT("%s must be an ndarray"), name);
+    }
+    ndarray_obj_t *array = MP_OBJ_TO_PTR(obj);
+    if (array->dtype != NDARRAY_FLOAT || array->ndim != ndim || !ndarray_is_dense(array)) {
+        mp_raise_msg_varg(&mp_type_ValueError,
+                          MP_ERROR_TEXT("%s must be a dense %dD float ndarray"), name, ndim);
+    }
+    return array;
+}
+
+static float py_ml_hz_to_mel(float hz) {
+    return 2595.0f * log10f(1.0f + hz / 700.0f);
+}
+
+static float py_ml_mel_to_hz(float mel) {
+    return 700.0f * (powf(10.0f, mel / 2595.0f) - 1.0f);
+}
+
+// Log-mel feature extractor, as torchaudio's MelSpectrogram (HTK mel scale, no filter
+// normalization, power 2, center=False) followed by log(x + 1e-6). The window and the mel
+// filter weights are computed once, when the object is created.
+typedef struct _py_ml_logmel_obj_t {
+    mp_obj_base_t base;
+    size_t n_fft;
+    size_t n_bins;
+    size_t n_mels;
+    size_t hop;
+    arm_rfft_fast_instance_f32 rfft;
+    float *window;      // Hann window, n_fft.
+    float *input;       // FFT input, n_fft.
+    float *spectrum;    // FFT output, n_fft.
+    float *power;       // Power spectrum, n_bins.
+    uint16_t *ranges;   // First bin and number of bins of each filter, n_mels * 2.
+    float *weights;     // Each filter's weights for its bins, in order.
+} py_ml_logmel_obj_t;
+
+// LogMel(n_mels=80, n_fft=512, hop=160, sample_rate=16000, f_min=0, f_max=sample_rate/2)
+static mp_obj_t py_ml_logmel_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args) {
+    enum { ARG_n_mels, ARG_n_fft, ARG_hop, ARG_sample_rate, ARG_f_min, ARG_f_max };
+    static const mp_arg_t allowed_args[] = {
+        { MP_QSTR_n_mels, MP_ARG_INT, {.u_int = 80 } },
+        { MP_QSTR_n_fft, MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int = 512 } },
+        { MP_QSTR_hop, MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int = 160 } },
+        { MP_QSTR_sample_rate, MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int = 16000 } },
+        { MP_QSTR_f_min, MP_ARG_KW_ONLY | MP_ARG_OBJ, {.u_rom_obj = MP_ROM_NONE } },
+        { MP_QSTR_f_max, MP_ARG_KW_ONLY | MP_ARG_OBJ, {.u_rom_obj = MP_ROM_NONE } },
+    };
+
+    mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
+    mp_arg_parse_all_kw_array(n_args, n_kw, all_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
+
+    mp_int_t n_mels = args[ARG_n_mels].u_int;
+    mp_int_t n_fft = args[ARG_n_fft].u_int;
+    mp_int_t hop = args[ARG_hop].u_int;
+    float sample_rate = args[ARG_sample_rate].u_int;
+    float f_min = (args[ARG_f_min].u_obj == mp_const_none) ? 0.0f :
+                  mp_obj_get_float(args[ARG_f_min].u_obj);
+    float f_max = (args[ARG_f_max].u_obj == mp_const_none) ? sample_rate / 2.0f :
+                  mp_obj_get_float(args[ARG_f_max].u_obj);
+
+    if (n_mels <= 0 || hop <= 0 || f_min < 0.0f || f_max <= f_min || f_max > sample_rate / 2.0f) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("invalid arguments"));
+    }
+
+    py_ml_logmel_obj_t *self = mp_obj_malloc(py_ml_logmel_obj_t, type);
+    if (n_fft <= 0 || arm_rfft_fast_init_f32(&self->rfft, n_fft) != ARM_MATH_SUCCESS) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("unsupported FFT size"));
+    }
+
+    self->n_fft = n_fft;
+    self->n_bins = n_fft / 2 + 1;
+    self->n_mels = n_mels;
+    self->hop = hop;
+    self->window = m_new(float, n_fft);
+    self->input = m_new(float, n_fft);
+    self->spectrum = m_new(float, n_fft);
+    self->power = m_new(float, self->n_bins);
+    self->ranges = m_new(uint16_t, n_mels * 2);
+
+    for (mp_int_t i = 0; i < n_fft; i++) {
+        self->window[i] = 0.5f - 0.5f * cosf(2.0f * PI * i / n_fft);
+    }
+
+    // Filter edges, evenly spaced on the mel scale. Filter m rises from edges[m] to edges[m + 1]
+    // and falls to edges[m + 2], and covers the bins strictly between edges[m] and edges[m + 2].
+    float *edges = m_new(float, n_mels + 2);
+    float mel_min = py_ml_hz_to_mel(f_min);
+    float mel_step = (py_ml_hz_to_mel(f_max) - mel_min) / (n_mels + 1);
+    for (mp_int_t i = 0; i < n_mels + 2; i++) {
+        edges[i] = py_ml_mel_to_hz(mel_min + mel_step * i);
+    }
+
+    float bin_hz = sample_rate / n_fft;
+    size_t n_weights = 0;
+    for (mp_int_t m = 0; m < n_mels; m++) {
+        size_t start = MIN((size_t) floorf(edges[m] / bin_hz) + 1, self->n_bins);
+        size_t end = MIN((size_t) ceilf(edges[m + 2] / bin_hz), self->n_bins);
+        self->ranges[m * 2 + 0] = start;
+        self->ranges[m * 2 + 1] = (end > start) ? end - start : 0;
+        n_weights += self->ranges[m * 2 + 1];
+    }
+
+    self->weights = m_new(float, MAX(n_weights, 1));
+    for (size_t m = 0, w = 0; m < (size_t) n_mels; m++) {
+        float lo = edges[m], mid = edges[m + 1], hi = edges[m + 2];
+        for (size_t k = self->ranges[m * 2 + 0], i = 0; i < self->ranges[m * 2 + 1]; k++, i++) {
+            float hz = k * bin_hz;
+            self->weights[w++] = MAX((hz <= mid) ? (hz - lo) / (mid - lo) : (hi - hz) / (hi - mid), 0.0f);
+        }
+    }
+    m_del(float, edges, n_mels + 2);
+    return MP_OBJ_FROM_PTR(self);
+}
+
+// LogMel(pcm, out, row=0) -> frames
+//
+// Computes the log-mel features of float PCM samples in [-1, 1] (like torchaudio; int16-scale
+// samples offset every feature by a constant): for each frame of n_fft samples, every
+// hop samples, the log of each mel band is written to out[row + i] (n_mels wide). Frames are
+// computed while samples remain and out has rows left. Returns the number of frames.
+static mp_obj_t py_ml_logmel_call(mp_obj_t self_in, size_t n_args, size_t n_kw, const mp_obj_t *all_args) {
+    py_ml_logmel_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    enum { ARG_pcm, ARG_out, ARG_row };
+    static const mp_arg_t allowed_args[] = {
+        { MP_QSTR_pcm, MP_ARG_REQUIRED | MP_ARG_OBJ },
+        { MP_QSTR_out, MP_ARG_REQUIRED | MP_ARG_OBJ },
+        { MP_QSTR_row, MP_ARG_INT, {.u_int = 0 } },
+    };
+
+    mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
+    mp_arg_parse_all_kw_array(n_args, n_kw, all_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
+
+    ndarray_obj_t *pcm = py_ml_audio_ndarray(args[ARG_pcm].u_obj, 1, "pcm");
+    ndarray_obj_t *out = py_ml_audio_ndarray(args[ARG_out].u_obj, 2, "out");
+    size_t out_rows = out->shape[ULAB_MAX_DIMS - 2];
+    mp_int_t row = args[ARG_row].u_int;
+
+    if (out->shape[ULAB_MAX_DIMS - 1] != self->n_mels) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("out width must be n_mels"));
+    }
+    if (row < 0 || (size_t) row > out_rows) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("invalid row"));
+    }
+
+    size_t frames = 0;
+    if (pcm->len >= self->n_fft) {
+        frames = MIN((pcm->len - self->n_fft) / self->hop + 1, out_rows - row);
+    }
+
+    const float *samples = (const float *) pcm->array;
+    float *features = (float *) out->array + row * self->n_mels;
+
+    for (size_t f = 0; f < frames; f++, samples += self->hop, features += self->n_mels) {
+        arm_mult_f32(samples, self->window, self->input, self->n_fft);
+        // Packed output: [DC, Nyquist], then the real and imaginary parts of bins 1..n_fft/2-1.
+        arm_rfft_fast_f32(&self->rfft, self->input, self->spectrum, 0);
+        self->power[0] = self->spectrum[0] * self->spectrum[0];
+        self->power[self->n_bins - 1] = self->spectrum[1] * self->spectrum[1];
+        arm_cmplx_mag_squared_f32(self->spectrum + 2, self->power + 1, self->n_bins - 2);
+
+        const float *w = self->weights;
+        for (size_t m = 0; m < self->n_mels; m++) {
+            float sum = 0.0f;
+            if (self->ranges[m * 2 + 1]) {
+                arm_dot_prod_f32(self->power + self->ranges[m * 2 + 0], w, self->ranges[m * 2 + 1], &sum);
+                w += self->ranges[m * 2 + 1];
+            }
+            features[m] = logf(sum + ML_LOG_MEL_EPS);
+        }
+    }
+    return mp_obj_new_int(frames);
+}
+
+MP_DEFINE_CONST_OBJ_TYPE(
+    py_ml_logmel_type,
+    MP_QSTR_LogMel,
+    MP_TYPE_FLAG_NONE,
+    make_new, py_ml_logmel_make_new,
+    call, py_ml_logmel_call
+    );
 #endif // MICROPY_PY_ML_OPS
