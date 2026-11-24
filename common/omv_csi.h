@@ -37,6 +37,10 @@
 #include "imlib.h"
 #include "framebuffer.h"
 
+#if !defined(OMV_CSI_STATS_ENABLE) && defined(OMV_CSI_STATS_IMAGE_ENABLE)
+#error "OMV_CSI_STATS_IMAGE_ENABLE requires OMV_CSI_STATS_ENABLE."
+#endif
+
 #define OV2640_SLV_ADDR         (0x60)
 #define OV5640_SLV_ADDR         (0x78)
 #define OV7725_SLV_ADDR         (0x42)
@@ -399,6 +403,16 @@ typedef struct omv_csi_stats {
 } omv_csi_stats_t;
 #endif // defined(OMV_CSI_STATS_ENABLE)
 
+// The processing a port applied to an image after the sensor, which the AWB stats undo
+// to measure the sensor's own colors: raw -> gains -> CCM -> gamma.
+typedef struct omv_csi_stats_xform {
+    float gains[3];         // White balance gains as applied by the hardware, after any rounding (1.0 if none).
+    bool ccm_valid;         // True if a color correction matrix was applied after the gains.
+    float ccm[3][3];        // Color correction matrix.
+    float offsets[3];       // Color correction offsets.
+    float gamma;            // Gamma applied last as a gain per pixel that keeps color ratios (1.0 if none).
+} omv_csi_stats_xform_t;
+
 // Log chromaticity of the raw R/G/B averages, folded to a constant at compile time.
 #define OMV_CSI_CCM_CHROMA(r, g, b) { __builtin_logf((float) (r) / (g)), __builtin_logf((float) (b) / (g)) }
 
@@ -475,6 +489,10 @@ typedef struct _omv_csi {
     omv_csi_stats_t stats;      // AWB stats struct.
     #endif // defined(OMV_CSI_STATS_ENABLE)
 
+    #if defined(OMV_CSI_STATS_IMAGE_ENABLE)
+    omv_csi_stats_xform_t stats_xform; // Processing last applied by the port, which the AWB stats undo.
+    #endif // defined(OMV_CSI_STATS_IMAGE_ENABLE)
+
     #ifdef OMV_CSI_PORT_BITS
     // Additional port-specific members like device base pointer,
     // DMA handles, and additional I/Os, are included directly here.
@@ -497,6 +515,11 @@ typedef struct _omv_csi {
     #ifdef OMV_CSI_HW_CCM_ENABLE
     const omv_csi_ccm_table_t *ccm; // Color correction matrices.
     #endif // OMV_CSI_HW_CCM_ENABLE
+
+    #ifdef OMV_CSI_HW_BLC_ENABLE
+    float blc_slope;            // Black level per unit of linear gain in 8-bit counts (0 if none).
+    uint32_t blc_ms;            // Time the black level was last updated.
+    #endif // OMV_CSI_HW_BLC_ENABLE
 
     // Sensor function pointers
     int (*reset) (omv_csi_t *csi);
@@ -653,6 +676,13 @@ int omv_csi_get_rgb_gain_db(omv_csi_t *csi, float *r_gain_db, float *g_gain_db, 
 #if defined(OMV_CSI_STATS_ENABLE)
 // Update RGB moving average struct.
 void omv_csi_stats_update(omv_csi_t *csi, uint32_t *r, uint32_t *g, uint32_t *b, uint32_t ms);
+
+#if defined(OMV_CSI_STATS_IMAGE_ENABLE)
+// Update RGB moving average struct from an RGB565 image. Pixels clipped in any channel or too dark are
+// skipped, and the rest are mapped back to sensor colors by undoing csi->stats_xform. Returns false if
+// too few pixels were usable, in which case the averages are held.
+bool omv_csi_stats_update_image(omv_csi_t *csi, const image_t *image, uint32_t ms);
+#endif // defined(OMV_CSI_STATS_IMAGE_ENABLE)
 
 // Get RGB moving average values.
 void omv_csi_stats_get(omv_csi_t *csi, float *r, float *g, float *b);

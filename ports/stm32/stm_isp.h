@@ -38,10 +38,19 @@
 #include "omv_csi.h"
 
 #ifdef DCMIPP
+// Gamma of the ISP's contrast table.
+#define STM_ISP_GAMMA   (2.2f)
+
 int stm_isp_init(omv_csi_t *csi, uint32_t pipe, pixformat_t pixformat, bool raw_output);
 int stm_isp_update_gamma_table(omv_csi_t *csi, uint32_t pipe,
                                float brightness, float contrast, float gamma);
+#if defined(OMV_CSI_STATS_IMAGE_ENABLE)
+void stm_isp_update_stats(omv_csi_t *csi, const image_t *image);
+#endif
 float stm_isp_update_awb(omv_csi_t *csi, uint32_t pipe);
+#ifdef OMV_CSI_HW_BLC_ENABLE
+void stm_isp_update_black_level(omv_csi_t *csi, uint32_t pipe);
+#endif
 int stm_isp_set_scaler(omv_csi_t *csi, uint32_t pipe);
 #endif
 

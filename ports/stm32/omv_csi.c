@@ -154,7 +154,7 @@ static uint32_t stm_csi_mipi_bitrate(uint32_t mbps) {
 int stm_csi_isp_reset(omv_csi_t *csi) {
     #if USE_DCMIPP
     if (csi->mipi_if) {
-        return stm_isp_update_gamma_table(csi, DCMIPP_PIPE, 0.0f, 1.0f, 2.2f);
+        return stm_isp_update_gamma_table(csi, DCMIPP_PIPE, 0.0f, 1.0f, STM_ISP_GAMMA);
     }
     #endif // USE_DCMIPP
     return 0;
@@ -797,12 +797,23 @@ static int stm_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
 
     #if USE_DCMIPP
     if (csi->raw_output) {
+        #if defined(OMV_CSI_STATS_IMAGE_ENABLE)
+        // Measure the AWB from this frame's pixels, before the ISP settings change.
+        image_t frame;
+        framebuffer_to_image(fb, &frame);
+        stm_isp_update_stats(csi, &frame);
+        #endif
+
         float luminance = stm_isp_update_awb(csi, DCMIPP_PIPE);
         if (csi->ioctl) {
             omv_csi_ioctl_arg_t arg = { .ivalue = fast_floorf(luminance) };
             omv_csi_ioctl(csi, OMV_CSI_IOCTL_UPDATE_AGC_AEC, &arg);
         }
 
+        #ifdef OMV_CSI_HW_BLC_ENABLE
+        // Reads the sensor gain, so it's only updated here and not from the frame IRQ.
+        stm_isp_update_black_level(csi, DCMIPP_PIPE);
+        #endif
     }
     #endif
 

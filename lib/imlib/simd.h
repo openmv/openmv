@@ -1470,6 +1470,14 @@ static inline int32_t vmladava_s16(v128_t v0, v128_t v1, int32_t acc) {
     #endif
 }
 
+static inline int32_t vaddva_s16(v128_t v0, int32_t acc) {
+    #if (__ARM_ARCH >= 8)
+    return vaddvaq_s16(acc, v0.s16);
+    #else
+    return acc + v0.s16[0] + v0.s16[1];
+    #endif
+}
+
 static inline v128_t vcvt_u32_f32(v128_t v0) {
     #if (__ARM_ARCH >= 8)
     return (v128_t) vcvtq(v0.u32);
@@ -1495,6 +1503,50 @@ static inline float vminv_f32_pred(v128_t v, float min, v128_predicate_t pred) {
     return vminnmvq_p_f32(min, v.f32, pred);
     #else
     return (v.f32[0] < min) ? v.f32[0] : min;
+    #endif
+}
+
+static inline v128_t vmin_u16(v128_t v0, v128_t v1) {
+    #if (__ARM_ARCH >= 8)
+    return (v128_t) vminq_u16(v0.u16, v1.u16);
+    #else
+    v128_u16_t mask = (v128_u16_t) (v0.u16 < v1.u16);
+    return (v128_t) {
+        .u16 = (v0.u16 & mask) | (v1.u16 & ~mask)
+    };
+    #endif
+}
+
+static inline v128_t vmax_u16(v128_t v0, v128_t v1) {
+    #if (__ARM_ARCH >= 8)
+    return (v128_t) vmaxq_u16(v0.u16, v1.u16);
+    #else
+    v128_u16_t mask = (v128_u16_t) (v0.u16 > v1.u16);
+    return (v128_t) {
+        .u16 = (v0.u16 & mask) | (v1.u16 & ~mask)
+    };
+    #endif
+}
+
+// Returns all ones in each lane where v0 >= x, else zero.
+static inline v128_t vcmp_ge_n_u16(v128_t v0, uint16_t x) {
+    #if (__ARM_ARCH >= 8)
+    return (v128_t) vpselq_u16(vdupq_n_u16(0xFFFF), vdupq_n_u16(0), vcmpcsq_n_u16(v0.u16, x));
+    #else
+    return (v128_t) {
+        .u16 = (v128_u16_t) (v0.u16 >= vdup_u16(x).u16)
+    };
+    #endif
+}
+
+// Returns all ones in each lane where v0 < x, else zero.
+static inline v128_t vcmp_lt_n_u16(v128_t v0, uint16_t x) {
+    #if (__ARM_ARCH >= 8)
+    return (v128_t) vpselq_u16(vdupq_n_u16(0), vdupq_n_u16(0xFFFF), vcmpcsq_n_u16(v0.u16, x));
+    #else
+    return (v128_t) {
+        .u16 = (v128_u16_t) (v0.u16 < vdup_u16(x).u16)
+    };
     #endif
 }
 
@@ -1621,6 +1673,17 @@ static inline v128_t vldr_u16_pred(const uint16_t *p, v128_predicate_t pred) {
         v0.u32[0] = p[0];
     }
 
+    return v0;
+    #endif
+}
+
+static inline v128_t vldr_u16_gather_pred(const uint16_t *p, v128_t offsets, v128_predicate_t pred) {
+    #if (__ARM_ARCH >= 8)
+    return (v128_t) vldrhq_gather_shifted_offset_z_u16(p, offsets.u16, pred);
+    #else
+    v128_t v0;
+    v0.u16[0] = pred > 0 ? *(p + offsets.u16[0]) : 0;
+    v0.u16[1] = pred > 1 ? *(p + offsets.u16[1]) : 0;
     return v0;
     #endif
 }

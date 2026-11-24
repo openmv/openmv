@@ -85,6 +85,8 @@
 #define OMV_CSI_CLK_FREQUENCY                 (24000000)
 #define OMV_CSI_HW_CROP_ENABLE                (0)
 #define OMV_CSI_MAX_DEVICES                   (3)
+#define OMV_CSI_STATS_ENABLE                  (1)
+#define OMV_CSI_STATS_IMAGE_ENABLE            (1)
 
 #define OMV_SOFTCSI_ENABLE                    (1)
 #endif //__BOARD_CONFIG_H__
