@@ -1096,8 +1096,13 @@ int pag7936_init(omv_csi_t *csi) {
     #endif // OMV_CSI_HW_CCM_ENABLE
 
     #ifdef OMV_CSI_HW_BLC_ENABLE
-    // Measured dark floor: ~4-5 counts at 16x gain, ~1-2 at 8x, 0 at 4x and below.
+    // The dark floor is ~0 at 2x gain and below, and grows to ~3 counts at 16x.
+    // It differs between boards (sensor setup, lens), so boards can override it.
+    #ifdef OMV_PAG7936_BLC_SLOPE
+    csi->blc_slope = OMV_PAG7936_BLC_SLOPE;
+    #else
     csi->blc_slope = 0.3f;
+    #endif
     #endif // OMV_CSI_HW_BLC_ENABLE
 
     return 0;

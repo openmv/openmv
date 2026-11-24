@@ -51,6 +51,7 @@
 
 #define OMV_LEPTON_ENABLE                   (1)
 #define OMV_PAG7936_ENABLE                  (1)
+#define OMV_PAG7936_BLC_SLOPE               (0.22f)
 #define OMV_SOFTCSI_ENABLE                  (1)
 #define OMV_PS5520_ENABLE                   (1)
 
