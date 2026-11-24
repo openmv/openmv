@@ -187,6 +187,11 @@ float stm_isp_update_awb(omv_csi_t *csi, uint32_t pipe) {
         omv_csi_stats_update(csi, &avg[0], &avg[1], &avg[2], mp_hal_ticks_ms());
     }
 
+    // There are no colors to balance, the exposure gains stay at unity.
+    if (csi->cfa_mono) {
+        return luminance;
+    }
+
     omv_csi_stats_get_gains(csi, &gain[0], &gain[1], &gain[2]);
 
     #if defined(OMV_CSI_STATS_IMAGE_ENABLE)
@@ -351,17 +356,27 @@ int stm_isp_init(omv_csi_t *csi, uint32_t pipe, pixformat_t pixformat, bool raw_
         return 0;
     }
 
+    static const uint32_t rawbayer_types[] = {
+        [SUBFORMAT_ID_BGGR] = DCMIPP_RAWBAYER_BGGR,
+        [SUBFORMAT_ID_GBRG] = DCMIPP_RAWBAYER_GBRG,
+        [SUBFORMAT_ID_GRBG] = DCMIPP_RAWBAYER_GRBG,
+        [SUBFORMAT_ID_RGGB] = DCMIPP_RAWBAYER_RGGB,
+    };
+
     // Configure ISP debayer.
     DCMIPP_RawBayer2RGBConfTypeDef rawcfg = {
-        .RawBayerType = DCMIPP_RAWBAYER_BGGR,
+        .RawBayerType = rawbayer_types[csi->cfa_format],
         .VLineStrength = DCMIPP_RAWBAYER_ALGO_NONE,
         .HLineStrength = DCMIPP_RAWBAYER_ALGO_NONE,
         .PeakStrength = DCMIPP_RAWBAYER_ALGO_NONE,
         .EdgeStrength = DCMIPP_RAWBAYER_ALGO_NONE,
     };
 
-    if (HAL_DCMIPP_PIPE_SetISPRawBayer2RGBConfig(&csi->dcmipp, pipe, &rawcfg) != HAL_OK ||
-        HAL_DCMIPP_PIPE_EnableISPRawBayer2RGB(&csi->dcmipp, pipe) != HAL_OK) {
+    if (csi->cfa_mono) {
+        // There's nothing to debayer, the pipe replicates the raw pixels.
+        HAL_DCMIPP_PIPE_DisableISPRawBayer2RGB(&csi->dcmipp, pipe);
+    } else if (HAL_DCMIPP_PIPE_SetISPRawBayer2RGBConfig(&csi->dcmipp, pipe, &rawcfg) != HAL_OK ||
+               HAL_DCMIPP_PIPE_EnableISPRawBayer2RGB(&csi->dcmipp, pipe) != HAL_OK) {
         return -1;
     }
 
