@@ -601,9 +601,13 @@ void jpeg_decompress(image_t *dst, image_t *src) {
         JPEG_state.in_data_len += JPEG_INPUT_FIFO_BYTES - diff;
     }
 
+    // jpeg_decompress_get_data() advances pJpegInBuffPtr, so keep the copy's start to free it.
+    uint8_t *in_copy = NULL;
+
     if (((uint32_t) src->data) % __SCB_DCACHE_LINE_SIZE) {
         // Copy to cache aligned buffer.
-        JPEG_state.jpeg_descr.pJpegInBuffPtr = uma_malloc(JPEG_state.in_data_len, UMA_CACHE);
+        in_copy = uma_malloc(JPEG_state.in_data_len, UMA_CACHE);
+        JPEG_state.jpeg_descr.pJpegInBuffPtr = in_copy;
         memcpy(JPEG_state.jpeg_descr.pJpegInBuffPtr, src->data, src->size);
     } else {
         JPEG_state.jpeg_descr.pJpegInBuffPtr = src->data;
@@ -632,6 +636,7 @@ void jpeg_decompress(image_t *dst, image_t *src) {
     }
 
     if ((src->w != JPEG_state.jpeg_descr.Conf.ImageWidth) || (src->h != JPEG_state.jpeg_descr.Conf.ImageHeight)) {
+        uma_free(in_copy);
         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("JPEG Geometry does not match Image Object Geometry!"));
     }
 
@@ -704,9 +709,7 @@ void jpeg_decompress(image_t *dst, image_t *src) {
             SCB_InvalidateDCache_by_Addr((uint32_t *) dst->data, image_size(dst));
         }
     } else if (conf.ColorSpace == JPEG_CMYK_COLORSPACE) {
-        if (((uint32_t) src->data) % __SCB_DCACHE_LINE_SIZE) {
-            uma_free(JPEG_state.jpeg_descr.pJpegInBuffPtr);
-        }
+        uma_free(in_copy);
         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Unsupported JPEG!"));
     }
 
@@ -969,9 +972,7 @@ exit_cleanup:
         HAL_DMA2D_DeInit(&DMA2D_Handle);
     }
 
-    if (((uint32_t) src->data) % __SCB_DCACHE_LINE_SIZE) {
-        uma_free(JPEG_state.jpeg_descr.pJpegInBuffPtr); // after DMA is aborted
-    }
+    uma_free(in_copy); // after DMA is aborted
 }
 
 void imlib_hardware_jpeg_init() {
