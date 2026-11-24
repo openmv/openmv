@@ -31,6 +31,7 @@
  * CSI Python module.
  */
 #include <stdio.h>
+#include <string.h>
 #include "py/mphal.h"
 #include "py/runtime.h"
 #include "shared/runtime/mpirq.h"
@@ -53,6 +54,7 @@
 #include "board_config.h"
 #include "omv_i2c.h"
 #include "py_helper.h"
+#include "py_csi_ng.h"
 #include "framebuffer.h"
 #if MICROPY_PY_ULAB
 #include "ndarray.h"
@@ -125,6 +127,15 @@ static MP_DEFINE_CONST_FUN_OBJ_0(py_csi_devices_obj, py_csi_devices);
 
 static mp_obj_t py_csi_deinit(mp_obj_t self_in) {
     py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+
+    // Remove the callbacks, which are called with this object and would
+    // otherwise be called after it's freed. The IRQs must not see half of one.
+    mp_uint_t atomic_state = MICROPY_BEGIN_ATOMIC_SECTION();
+    omv_csi_set_vsync_callback(self->csi, (omv_csi_cb_t) { NULL, NULL });
+    omv_csi_set_frame_callback(self->csi, (omv_csi_cb_t) { NULL, NULL });
+    MICROPY_END_ATOMIC_SECTION(atomic_state);
+    self->vsync_cb = mp_const_none;
+    self->frame_cb = mp_const_none;
 
     // Abort any ongoing capture.
     omv_csi_abort(self->csi, true, false);
@@ -1342,11 +1353,20 @@ mp_obj_t py_csi_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, 
         omv_csi_raise_error(OMV_CSI_ERROR_ISC_UNDETECTED);
     }
 
-    py_csi_obj_t *self = mp_obj_malloc_with_finaliser(py_csi_obj_t, &py_csi_type);
-    self->csi = csi;
-    self->frame_cb = mp_const_none;
-    self->vsync_cb = mp_const_none;
-    self->vsync_state = false;
+    // Each sensor has one object, which holds the sensor's framebuffer and is
+    // passed to its callbacks, so it's returned again instead of another one.
+    mp_obj_t *obj = &MP_STATE_PORT(py_csi_obj)[csi - csi_all];
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(*obj);
+
+    if (*obj == MP_OBJ_NULL) {
+        self = mp_obj_malloc_with_finaliser(py_csi_obj_t, &py_csi_type);
+        self->csi = csi;
+        self->frame_cb = mp_const_none;
+        self->vsync_cb = mp_const_none;
+        self->vsync_state = false;
+        *obj = MP_OBJ_FROM_PTR(self);
+    }
+
     csi->disable_delays = !args[ARG_delays].u_bool;
     csi->disable_full_flush = !args[ARG_fflush].u_bool;
 
@@ -1665,5 +1685,11 @@ const mp_obj_module_t csi_module = {
     .globals = (mp_obj_t) &globals_dict,
 };
 
+void py_csi_init0(void) {
+    // Clear root pointers after a soft-reset, as the objects were freed with the heap.
+    memset(MP_STATE_PORT(py_csi_obj), 0, sizeof(MP_STATE_PORT(py_csi_obj)));
+}
+
+MP_REGISTER_ROOT_POINTER(mp_obj_t py_csi_obj[OMV_CSI_MAX_DEVICES]);
 MP_REGISTER_MODULE(MP_QSTR_csi, csi_module);
 #endif // MICROPY_PY_CSI_NG

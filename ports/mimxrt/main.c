@@ -68,6 +68,7 @@
 #include "board_config.h"
 #include "framebuffer.h"
 #include "omv_csi.h"
+#include "py_csi_ng.h"
 #include "file_utils.h"
 #include "mp_utils.h"
 #include "mimxrt_hal.h"
@@ -109,6 +110,9 @@ soft_reset:
     imlib_init();
     readline_init0();
     framebuffer_init0();
+    #if MICROPY_PY_CSI_NG
+    py_csi_init0();
+    #endif
     omv_csi_init0();
     machine_adc_init();
     #if MICROPY_PY_MACHINE_SDCARD
