@@ -7,6 +7,9 @@
 # Thanks for buying the Pure Thermal OpenMV! This example script shows
 # off thermal video overlay onto the color camera image and driving
 # the attached LCD screen and HDMI output.
+#
+# Double tap the touch screen to save the current frame to the SD card as
+# a JPEG. The green LED is on while the image is being saved.
 
 import csi
 import image
@@ -14,6 +17,9 @@ import time
 import display
 import math
 import tfp410
+import ft5x06
+import os
+from machine import LED
 
 
 # Color Tracking Thresholds (Grayscale Min, Grayscale Max)
@@ -76,6 +82,33 @@ def map_g_to_temp(g):
     ) + min_temp_in_celsius
 
 
+touch = ft5x06.FT5X06()
+touching = False
+last_tap_ms = None
+capture_led = LED("LED_GREEN")
+capture_count = 0
+
+
+def save_image(img):
+    global capture_count
+    # The SD card is mounted at /sdcard and becomes the working directory.
+    if os.getcwd() != "/sdcard":
+        print("Insert an SD card to save images.")
+        return
+    # Skip over images saved by earlier runs.
+    while True:
+        capture_count += 1
+        name = "capture_%04d.jpg" % capture_count
+        try:
+            os.stat(name)
+        except OSError:
+            break
+    capture_led.on()
+    img.save(name, quality=90)
+    capture_led.off()
+    print("Saved " + name)
+
+
 # Kickstart thermal camera capture.
 csi1.snapshot(blocking=True, image=fir_img)
 
@@ -121,6 +154,21 @@ while True:
         img.draw_string((int((blob_stat[0][0] * x_scale) + 4),
                          int((blob_stat[0][1] * y_scale) + 1)),
                         '%.2f C' % blob_stat[1], mono_space=False, scale=2)
+
+    # Save the frame on a double tap: two touches within 500 ms.
+    try:
+        touched = touch.update_points() > 0
+    except OSError:
+        # The touch controller doesn't always answer, keep the last state.
+        touched = touching
+    if touched and not touching:
+        now = time.ticks_ms()
+        if last_tap_ms is not None and time.ticks_diff(now, last_tap_ms) < 500:
+            save_image(img)
+            last_tap_ms = None
+        else:
+            last_tap_ms = now
+    touching = touched
 
     lcd.write(img, hint=(
         image.BILINEAR | image.CENTER | image.SCALE_ASPECT_KEEP
