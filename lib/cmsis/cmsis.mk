@@ -40,7 +40,7 @@ CMSIS_SRC_C += $(addprefix cmsis/src/dsp/Source/,\
 
 # CMSIS-DSP real FFT and vector math, used by the ML ops.
 ifeq ($(MICROPY_PY_ML_OPS), 1)
-CMSIS_SRC_C += $(addprefix cmsis/src/dsp/Source/,\
+CMSIS_DSP_SRC_C = $(addprefix cmsis/src/dsp/Source/,\
 	TransformFunctions/arm_rfft_fast_f32.c \
 	TransformFunctions/arm_rfft_fast_init_f32.c \
 	TransformFunctions/arm_cfft_f32.c \
@@ -51,6 +51,17 @@ CMSIS_SRC_C += $(addprefix cmsis/src/dsp/Source/,\
 	BasicMathFunctions/arm_dot_prod_f32.c \
 	ComplexMathFunctions/arm_cmplx_mag_squared_f32.c \
 )
+CMSIS_SRC_C += $(CMSIS_DSP_SRC_C)
+
+# Clang generates better Helium code.
+ifeq ($(CLANG_ENABLE), 1)
+CMSIS_DSP_OBJ = $(addprefix $(BUILD)/lib/, $(CMSIS_DSP_SRC_C:.c=.o))
+OMV_CLANG_OBJ += $(CMSIS_DSP_OBJ)
+# Clang disables floating-point Helium with the FPU that GCC uses.
+ifeq ($(CPU), cortex-m55)
+$(CMSIS_DSP_OBJ): CLANG_FLAGS += -mfpu=fp-armv8-fullfp16-d16
+endif
+endif
 endif
 
 # CMSIS-NN, used by the ML backends. The float kernels are not used.

@@ -82,7 +82,7 @@ IMLIB_SRC_C += \
 CFLAGS += -I$(TOP_DIR)/lib/imlib -DAPRILTAG_HAVE_CONFIG
 
 ifeq ($(CLANG_ENABLE),1)
-OMV_CLANG_OBJ = $(BUILD)/lib/imlib/bayer.o
+OMV_CLANG_OBJ += $(BUILD)/lib/imlib/bayer.o
 OMV_CLANG_OBJ += $(BUILD)/lib/imlib/imlib.o
 endif
 
