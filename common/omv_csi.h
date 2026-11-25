@@ -103,6 +103,8 @@
 #define PAJ6100_ID              (0x6100)
 #define FROGEYE2020_ID          (0x2020)
 #define SOFTCSI_ID              (0x50F7)
+// Bits [47:16] of the I3C provisioned ID, the manufacturer and part IDs.
+#define VL53L9CX_ID             (0x02080102)
 
 #define OMV_CSI_TIMEOUT_MS      (3000)
 
