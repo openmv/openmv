@@ -38,8 +38,8 @@ CMSIS_SRC_C += $(addprefix cmsis/src/dsp/Source/,\
 	FastMathFunctions/FastMathFunctionsF16.c \
 )
 
-# CMSIS-DSP real FFT and vector math, used for ML audio features.
-ifneq ($(filter 1,$(MICROPY_PY_ML_TFLM) $(MICROPY_PY_ML_TORCH)),)
+# CMSIS-DSP real FFT and vector math, used by the ML ops.
+ifeq ($(MICROPY_PY_ML_OPS), 1)
 CMSIS_SRC_C += $(addprefix cmsis/src/dsp/Source/,\
 	TransformFunctions/arm_rfft_fast_f32.c \
 	TransformFunctions/arm_rfft_fast_init_f32.c \
