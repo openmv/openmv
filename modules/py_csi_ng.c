@@ -1097,6 +1097,50 @@ static void py_csi_unpack_genx320_events(py_csi_obj_t *self, size_t n_args,
 }
 #endif // (OMV_GENX320_ENABLE == 1)
 
+#if (OMV_CSI_TOF_ENABLE == 1)
+static void py_csi_unpack_tof_planes(py_csi_obj_t *self, size_t n_args,
+                                     const mp_obj_t *args, void *arg) {
+    omv_csi_tof_ioctl_arg_t *a = arg;
+    // The planes are written as floats, which must be the type of the array.
+    _Static_assert(sizeof(mp_float_t) == sizeof(float), "ulab floats must be single precision");
+    omv_csi_tof_ioctl_arg_t enabled = {0};
+
+    // The array holds the enabled planes.
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_TOF_GET_ENABLED_PLANES, &enabled);
+    if (error < 0) {
+        omv_csi_raise_error(error);
+    }
+
+    uint32_t count = __builtin_popcount(enabled.ivalue);
+
+    if (!MP_OBJ_IS_TYPE(args[0], &ulab_ndarray_type)) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected a ndarray with dtype float"));
+    }
+
+    ndarray_obj_t *array = MP_OBJ_TO_PTR(args[0]);
+
+    if (array->dtype != NDARRAY_FLOAT) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected a ndarray with dtype float"));
+    }
+
+    // The planes are laid out like the image, so the array has its shape.
+    framebuffer_t *fb = self->csi->fb;
+    uint32_t width = self->csi->transpose ? fb->v : fb->u;
+    uint32_t height = self->csi->transpose ? fb->u : fb->v;
+
+    if (!(ndarray_is_dense(array) && (array->ndim == 3) &&
+          (array->shape[ULAB_MAX_DIMS - 3] == height) &&
+          (array->shape[ULAB_MAX_DIMS - 2] == width) &&
+          (array->shape[ULAB_MAX_DIMS - 1] == count))) {
+        mp_raise_msg_varg(&mp_type_ValueError,
+                          MP_ERROR_TEXT("Expected a dense ndarray with shape (%d, %d, %d)"),
+                          height, width, count);
+    }
+
+    a->planes = (float *) array->array;
+}
+#endif // (OMV_CSI_TOF_ENABLE == 1)
+
 static const py_csi_ioctl_desc_t py_csi_ioctl_table[] = {
     // Common requests.
     { OMV_CSI_IOCTL_SET_READOUT_WINDOW,    1, 1, "W",  "",     NULL, NULL },
@@ -1192,6 +1236,18 @@ static const py_csi_ioctl_desc_t py_csi_ioctl_table[] = {
     { OMV_CSI_IOCTL_BOSON_GET_TEMP_FROM_COUNTS,   2, 2, "ii", "__f",      NULL, NULL },
     { OMV_CSI_IOCTL_BOSON_GET_RBFO,               2, 2, "ii", "__ffff",   NULL, NULL },
     #endif // (OMV_BOSON_ENABLE == 1)
+
+    #if (OMV_CSI_TOF_ENABLE == 1)
+    // Time-of-flight sensors.
+    { OMV_CSI_IOCTL_TOF_GET_PLANES,             0, 0, "",   "i",  NULL, NULL },
+    { OMV_CSI_IOCTL_TOF_SET_PLANES,             1, 1, "i",  "",   NULL, NULL },
+    { OMV_CSI_IOCTL_TOF_GET_ENABLED_PLANES,     0, 0, "",   "i",  NULL, NULL },
+    { OMV_CSI_IOCTL_TOF_READ_PLANES,            1, 1, NULL, "",   py_csi_unpack_tof_planes, NULL },
+    { OMV_CSI_IOCTL_TOF_SET_RANGE,              2, 2, "ii", "",   NULL, NULL },
+    { OMV_CSI_IOCTL_TOF_GET_RANGE,              0, 0, "",   "ii", NULL, NULL },
+    { OMV_CSI_IOCTL_TOF_SET_MODE,               1, 1, "i",  "",   NULL, NULL },
+    { OMV_CSI_IOCTL_TOF_GET_MODE,               0, 0, "",   "i",  NULL, NULL },
+    #endif // (OMV_CSI_TOF_ENABLE == 1)
 };
 
 static const py_csi_ioctl_desc_t *py_csi_ioctl_find(int request) {
@@ -1220,6 +1276,9 @@ static mp_obj_t py_csi_ioctl(size_t n_args, const mp_obj_t *args) {
         #endif
         #if (OMV_BOSON_ENABLE == 1)
         boson_ioctl_arg_t boson;
+        #endif
+        #if (OMV_CSI_TOF_ENABLE == 1)
+        omv_csi_tof_ioctl_arg_t tof;
         #endif
     } arg = {0};
 
@@ -1656,6 +1715,27 @@ static const mp_rom_map_elem_t globals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_BOSON_SPOT_METER_CELSIUS),              MP_ROM_INT(OMV_CSI_BOSON_SPOT_METER_CELSIUS) },
     { MP_ROM_QSTR(MP_QSTR_BOSON_SPOT_METER_FAHRENHEIT),           MP_ROM_INT(OMV_CSI_BOSON_SPOT_METER_FAHRENHEIT) },
     { MP_ROM_QSTR(MP_QSTR_BOSON_SPOT_METER_KELVIN),               MP_ROM_INT(OMV_CSI_BOSON_SPOT_METER_KELVIN) },
+    #endif
+
+    #if (OMV_CSI_TOF_ENABLE == 1)
+    // Time-of-flight sensors.
+    { MP_ROM_QSTR(MP_QSTR_IOCTL_TOF_GET_PLANES),             MP_ROM_INT(OMV_CSI_IOCTL_TOF_GET_PLANES) },
+    { MP_ROM_QSTR(MP_QSTR_IOCTL_TOF_SET_PLANES),             MP_ROM_INT(OMV_CSI_IOCTL_TOF_SET_PLANES) },
+    { MP_ROM_QSTR(MP_QSTR_IOCTL_TOF_GET_ENABLED_PLANES),     MP_ROM_INT(OMV_CSI_IOCTL_TOF_GET_ENABLED_PLANES) },
+    { MP_ROM_QSTR(MP_QSTR_IOCTL_TOF_READ_PLANES),            MP_ROM_INT(OMV_CSI_IOCTL_TOF_READ_PLANES) },
+    { MP_ROM_QSTR(MP_QSTR_IOCTL_TOF_SET_RANGE),              MP_ROM_INT(OMV_CSI_IOCTL_TOF_SET_RANGE) },
+    { MP_ROM_QSTR(MP_QSTR_IOCTL_TOF_GET_RANGE),              MP_ROM_INT(OMV_CSI_IOCTL_TOF_GET_RANGE) },
+    { MP_ROM_QSTR(MP_QSTR_IOCTL_TOF_SET_MODE),               MP_ROM_INT(OMV_CSI_IOCTL_TOF_SET_MODE) },
+    { MP_ROM_QSTR(MP_QSTR_IOCTL_TOF_GET_MODE),               MP_ROM_INT(OMV_CSI_IOCTL_TOF_GET_MODE) },
+    { MP_ROM_QSTR(MP_QSTR_TOF_PLANE_DEPTH),                  MP_ROM_INT(OMV_CSI_TOF_PLANE_DEPTH) },
+    { MP_ROM_QSTR(MP_QSTR_TOF_PLANE_SIGNAL),                 MP_ROM_INT(OMV_CSI_TOF_PLANE_SIGNAL) },
+    { MP_ROM_QSTR(MP_QSTR_TOF_PLANE_AMBIENT),                MP_ROM_INT(OMV_CSI_TOF_PLANE_AMBIENT) },
+    { MP_ROM_QSTR(MP_QSTR_TOF_PLANE_SPADS),                  MP_ROM_INT(OMV_CSI_TOF_PLANE_SPADS) },
+    { MP_ROM_QSTR(MP_QSTR_TOF_PLANE_SNR),                    MP_ROM_INT(OMV_CSI_TOF_PLANE_SNR) },
+    { MP_ROM_QSTR(MP_QSTR_TOF_PLANE_SIGMA),                  MP_ROM_INT(OMV_CSI_TOF_PLANE_SIGMA) },
+    { MP_ROM_QSTR(MP_QSTR_TOF_PLANE_STATUS),                 MP_ROM_INT(OMV_CSI_TOF_PLANE_STATUS) },
+    { MP_ROM_QSTR(MP_QSTR_TOF_MODE_PRECISION),               MP_ROM_INT(OMV_CSI_TOF_MODE_PRECISION) },
+    { MP_ROM_QSTR(MP_QSTR_TOF_MODE_RANGE),                   MP_ROM_INT(OMV_CSI_TOF_MODE_RANGE) },
     #endif
 };
 static MP_DEFINE_CONST_DICT(globals_dict, globals_dict_table);
