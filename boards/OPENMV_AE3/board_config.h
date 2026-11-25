@@ -104,6 +104,7 @@ extern unsigned char OMV_BOARD_UID_ADDR[12];    // Unique address.
 #define OMV_OPENAMP_SIZE                (64K)
 #define OMV_GC_BLOCK0_MEMORY            SRAM0   // Main GC block
 #define OMV_GC_BLOCK0_SIZE              (4M)
+#define OMV_FONT_CACHE_SIZE             (32 * 1024) // Glyph cache for draw_string(), from the heap.
 #define OMV_UMA_BLOCK0_MEMORY           SRAM1   // Default UMA pool.
 #define OMV_UMA_BLOCK0_SIZE             (2512K)
 #define OMV_UMA_BLOCK0_FLAGS            (UMA_DEFAULT)
