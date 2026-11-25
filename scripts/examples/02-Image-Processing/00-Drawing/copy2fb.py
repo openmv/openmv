@@ -7,13 +7,10 @@
 # This example shows how to load and display an image.
 
 import image
-import time
 
 # Load image
 img = image.Image("example.bmp", copy_to_fb=True)
 
-# Send the loaded image to the IDE for display.
+# Show the image in the IDE; flush() blocks until the IDE has picked up
+# the frame (or a timeout, default 1000 ms, expires).
 img.flush()
-
-# Add a small delay to allow the IDE to read the image.
-time.sleep_ms(1000)
