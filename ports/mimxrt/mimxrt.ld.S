@@ -61,6 +61,20 @@ _start = main;
 __flash_start = ORIGIN(FLASH);
 #if defined(OMV_DRAM_ORIGIN)
 __sdram_start = ORIGIN(DRAM);
+__sdram_end = ORIGIN(DRAM) + LENGTH(DRAM);
+#endif
+// RAM region bounds for drivers that must keep a DMA/accelerator access inside mapped memory.
+#if defined(OMV_DTCM_ORIGIN)
+__dtcm_start = ORIGIN(DTCM);
+__dtcm_end = ORIGIN(DTCM) + LENGTH(DTCM);
+#endif
+#if defined(OMV_OCRM1_ORIGIN)
+__ocrm1_start = ORIGIN(OCRM1);
+__ocrm1_end = ORIGIN(OCRM1) + LENGTH(OCRM1);
+#endif
+#if defined(OMV_OCRM2_ORIGIN)
+__ocrm2_start = ORIGIN(OCRM2);
+__ocrm2_end = ORIGIN(OCRM2) + LENGTH(OCRM2);
 #endif
 __vfs_start = ORIGIN(FLASH_VFS);
 __vfs_end = ORIGIN(FLASH_VFS) + LENGTH(FLASH_VFS);  
