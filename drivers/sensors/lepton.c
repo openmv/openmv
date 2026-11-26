@@ -70,6 +70,8 @@ typedef struct lepton_state {
     bool radiometry;
     bool high_temp_mode;
     bool measurement_mode;
+    // Set while a frame is read as temperatures.
+    float *temps;
     LEP_CAMERA_PORT_DESC_T port;
 } lepton_state_t;
 
@@ -248,6 +250,24 @@ static int ioctl(omv_csi_t *csi, int request, void *arg) {
             a->range.max = lepton.max_temp;
             break;
         }
+        case OMV_CSI_IOCTL_LEPTON_READ_TEMPS: {
+            image_t image;
+
+            // Without measurement mode the frames are AGC levels, not temperatures.
+            if (!lepton.measurement_mode) {
+                ret = OMV_CSI_ERROR_INVALID_ARGUMENT;
+                break;
+            }
+
+            lepton.temps = a->temps;
+            ret = omv_csi_snapshot(csi, &image, OMV_CSI_FLAG_NO_POST | OMV_CSI_FLAG_NO_UPDATE);
+            lepton.temps = NULL;
+
+            // The frame isn't rendered, so keep the IDE from showing it when
+            // the next snapshot releases it.
+            csi->fb->pixfmt = PIXFORMAT_INVALID;
+            break;
+        }
         default: {
             ret = -1;
             break;
@@ -255,6 +275,29 @@ static int ioctl(omv_csi_t *csi, int request, void *arg) {
     }
 
     return ret;
+}
+
+// Converts a frame to temperatures in Celsius, with the mirror, flip and transpose
+// of the image. Radiometric frames are in 0.01 Kelvin, others are relative to the
+// focal plane array temperature.
+static void lepton_fill_temps(float *temps, const uint16_t *raw, int kelvin, bool transpose) {
+    int w = lepton.h_res;
+    int h = lepton.v_res;
+
+    for (int y = 0; y < h; y++) {
+        int y_dst = lepton.vflip ? (h - 1 - y) : y;
+
+        for (int x = 0; x < w; x++) {
+            int x_dst = lepton.hmirror ? (w - 1 - x) : x;
+            int value = raw[y * w + x];
+
+            if (!lepton.radiometry) {
+                value = (value - 8192) + kelvin;
+            }
+
+            temps[transpose ? (x_dst * h + y_dst) : (y_dst * w + x_dst)] = (value * 0.01f) - 273.15f;
+        }
+    }
 }
 
 static int lepton_config(omv_csi_t *csi, bool measurement_mode, bool high_temp_mode) {
@@ -439,6 +482,11 @@ static int snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
         if (LEP_GetSysFpaTemperatureKelvin(&lepton.port, &kelvin) != LEP_OK) {
             return OMV_CSI_ERROR_IO_ERROR;
         }
+    }
+
+    if (lepton.temps) {
+        lepton_fill_temps(lepton.temps, (uint16_t *) fb_image.data, kelvin, csi->transpose);
+        return 0;
     }
 
     image_t temp = {

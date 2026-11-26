@@ -1062,6 +1062,44 @@ static mp_obj_t py_csi_pack_lepton_attr(const void *arg) {
     return mp_obj_new_bytearray_by_ref(a->attr.len * sizeof(uint16_t), a->attr.data);
 }
 
+#if MICROPY_PY_ULAB
+static void py_csi_unpack_lepton_temps(py_csi_obj_t *self, size_t n_args,
+                                       const mp_obj_t *args, void *arg) {
+    lepton_ioctl_arg_t *a = arg;
+    // The temperatures are written as floats, which must be the type of the array.
+    _Static_assert(sizeof(mp_float_t) == sizeof(float), "ulab floats must be single precision");
+    lepton_ioctl_arg_t width = {0}, height = {0};
+
+    if (omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_LEPTON_GET_WIDTH, &width) < 0 ||
+        omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_LEPTON_GET_HEIGHT, &height) < 0) {
+        omv_csi_raise_error(OMV_CSI_ERROR_CTL_FAILED);
+    }
+
+    if (!MP_OBJ_IS_TYPE(args[0], &ulab_ndarray_type)) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected a ndarray with dtype float"));
+    }
+
+    ndarray_obj_t *array = MP_OBJ_TO_PTR(args[0]);
+
+    if (array->dtype != NDARRAY_FLOAT) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected a ndarray with dtype float"));
+    }
+
+    // The temperatures are laid out like the image.
+    uint32_t w = self->csi->transpose ? height.ivalue : width.ivalue;
+    uint32_t h = self->csi->transpose ? width.ivalue : height.ivalue;
+
+    if (!(ndarray_is_dense(array) && (array->ndim == 2) &&
+          (array->shape[ULAB_MAX_DIMS - 2] == h) &&
+          (array->shape[ULAB_MAX_DIMS - 1] == w))) {
+        mp_raise_msg_varg(&mp_type_ValueError,
+                          MP_ERROR_TEXT("Expected a dense ndarray with shape (%d, %d)"), h, w);
+    }
+
+    a->temps = (float *) array->array;
+}
+#endif // MICROPY_PY_ULAB
+
 #if (OMV_GENX320_ENABLE == 1)
 static mp_obj_t py_csi_pack_genx320_image(const void *arg) {
     const genx320_ioctl_arg_t *a = arg;
@@ -1128,6 +1166,9 @@ static const py_csi_ioctl_desc_t py_csi_ioctl_table[] = {
     { OMV_CSI_IOCTL_LEPTON_GET_MODE,       0, 0, "",   "bb",   NULL, NULL },
     { OMV_CSI_IOCTL_LEPTON_SET_RANGE,      2, 2, "ff", "",     NULL, NULL },
     { OMV_CSI_IOCTL_LEPTON_GET_RANGE,      0, 0, "",   "ff",   NULL, NULL },
+    #if MICROPY_PY_ULAB
+    { OMV_CSI_IOCTL_LEPTON_READ_TEMPS,     1, 1, NULL, "",     py_csi_unpack_lepton_temps, NULL },
+    #endif
     { OMV_CSI_IOCTL_LEPTON_SET_ATTRIBUTE,  2, 2, NULL, "",     py_csi_unpack_lepton_set_attr, NULL },
     { OMV_CSI_IOCTL_LEPTON_GET_ATTRIBUTE,  2, 2, NULL, NULL,   py_csi_unpack_lepton_get_attr,
       py_csi_pack_lepton_attr },
@@ -1564,6 +1605,7 @@ static const mp_rom_map_elem_t globals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_IOCTL_LEPTON_GET_MODE),       MP_ROM_INT(OMV_CSI_IOCTL_LEPTON_GET_MODE) },
     { MP_ROM_QSTR(MP_QSTR_IOCTL_LEPTON_SET_RANGE),      MP_ROM_INT(OMV_CSI_IOCTL_LEPTON_SET_RANGE) },
     { MP_ROM_QSTR(MP_QSTR_IOCTL_LEPTON_GET_RANGE),      MP_ROM_INT(OMV_CSI_IOCTL_LEPTON_GET_RANGE) },
+    { MP_ROM_QSTR(MP_QSTR_IOCTL_LEPTON_READ_TEMPS),     MP_ROM_INT(OMV_CSI_IOCTL_LEPTON_READ_TEMPS) },
     #if (OMV_HM01B0_ENABLE == 1)
     { MP_ROM_QSTR(MP_QSTR_IOCTL_HIMAX_MD_ENABLE),       MP_ROM_INT(OMV_CSI_IOCTL_HIMAX_MD_ENABLE) },
     { MP_ROM_QSTR(MP_QSTR_IOCTL_HIMAX_MD_WINDOW),       MP_ROM_INT(OMV_CSI_IOCTL_HIMAX_MD_WINDOW) },
