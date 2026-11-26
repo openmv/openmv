@@ -1424,6 +1424,10 @@ mp_obj_t py_csi_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, 
         }
     } else if (mp_obj_is_true(args[ARG_stream].u_obj)) {
         stream_fb->source = csi->chip_id;
+    } else if (omv_csi_match(csi, stream_fb->source)) {
+        // The sensor may still be the source, set by the IDE or an earlier
+        // script, so it's cleared.
+        stream_fb->source = 0;
     }
 
     #if MICROPY_PY_IMU
