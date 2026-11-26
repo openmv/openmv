@@ -265,6 +265,7 @@ typedef enum {
     OMV_CSI_IOCTL_LEPTON_GET_MODE                 = 0x10B,
     OMV_CSI_IOCTL_LEPTON_SET_RANGE                = 0x10C | OMV_CSI_IOCTL_FLAG_ABORT,
     OMV_CSI_IOCTL_LEPTON_GET_RANGE                = 0x10D,
+    OMV_CSI_IOCTL_LEPTON_READ_TEMPS               = 0x10E,
 
     // Himax.
     OMV_CSI_IOCTL_HIMAX_MD_ENABLE                 = 0x200,

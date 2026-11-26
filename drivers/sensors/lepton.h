@@ -43,6 +43,7 @@ typedef union {
         uint16_t *data;
         uint32_t len;
     } attr;                             // custom
+    float *temps;                       // custom
 } lepton_ioctl_arg_t;
 
 #endif // __LEPTON_H__
