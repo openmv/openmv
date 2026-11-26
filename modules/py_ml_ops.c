@@ -267,6 +267,79 @@ static mp_obj_t py_ml_depth_to_space(mp_obj_t x_obj, mp_obj_t factor_obj) {
 }
 MP_DEFINE_CONST_FUN_OBJ_2(py_ml_depth_to_space_obj, py_ml_depth_to_space);
 
+// Samples an image at the pixel coordinates of a (h, w, 2) grid of x and y, with
+// bilinear interpolation and clamped edges, into a (h, w, channels) float array
+// of 0 to 1. Images are GRAYSCALE (1 channel) or RGB565 (3 channels).
+static mp_obj_t py_ml_grid_sample(mp_obj_t img_obj, mp_obj_t grid_obj, mp_obj_t out_obj) {
+    image_t *img = py_helper_arg_to_image(img_obj, ARG_IMAGE_UNCOMPRESSED);
+    size_t h, w, c, oh, ow, oc;
+    const float *grid = py_ml_ops_get_array(grid_obj, &h, &w, &c);
+    float *out = py_ml_ops_get_array(out_obj, &oh, &ow, &oc);
+    size_t channels = (img->pixfmt == PIXFORMAT_RGB565) ? 3 : 1;
+
+    if (img->pixfmt != PIXFORMAT_RGB565 && img->pixfmt != PIXFORMAT_GRAYSCALE) {
+        mp_raise_ValueError(MP_ERROR_TEXT("Expected a GRAYSCALE or RGB565 image"));
+    }
+
+    if (c != 2 || oh != h || ow != w || oc != channels) {
+        mp_raise_ValueError(MP_ERROR_TEXT("Expected grid (h, w, 2) and out (h, w, channels)"));
+    }
+
+    // FLOAT32_VECTOR_SIZE grid points at a time: their x and y are 2 apart, and
+    // their outputs channels apart.
+    const v128_t xy = vmul_n_u32(vidup_u32(0, 1), 2);
+    const v128_t co = vmul_n_u32(vidup_u32(0, 1), channels);
+    const v128_t zero = vdup_f32(0.0f), one = vdup_f32(1.0f);
+    const v128_t xmax = vdup_f32(img->w - 1), ymax = vdup_f32(img->h - 1);
+    size_t count = h * w;
+
+    for (size_t i = 0; i < count; i += FLOAT32_VECTOR_SIZE) {
+        v128_predicate_t pred = vpredicate_32(count - i);
+        const float *g = grid + i * 2;
+
+        // Not a number clamps to 0.
+        v128_t x = vmin_f32(vmax_f32(vldr_f32_gather_pred(g, xy, pred), zero), xmax);
+        v128_t y = vmin_f32(vmax_f32(vldr_f32_gather_pred(g + 1, xy, pred), zero), ymax);
+        v128_t x0 = vcvt_f32_s32(x), y0 = vcvt_f32_s32(y);
+        v128_t x1 = vcvt_f32_s32(vmin_f32(vadd_f32(x, one), xmax));
+        v128_t y1 = vcvt_f32_s32(vmin_f32(vadd_f32(y, one), ymax));
+        v128_t fx = vsub_f32(x, vcvt_s32_f32(x0)), fy = vsub_f32(y, vcvt_s32_f32(y0));
+        v128_t gx = vsub_f32(one, fx), gy = vsub_f32(one, fy);
+        v128_t k[4] = { vmul_f32(gx, gy), vmul_f32(fx, gy), vmul_f32(gx, fy), vmul_f32(fx, fy) };
+
+        // The offsets of the 4 pixels.
+        v128_t o[4] = {
+            vmla_n_u32(y0, img->w, x0), vmla_n_u32(y0, img->w, x1),
+            vmla_n_u32(y1, img->w, x0), vmla_n_u32(y1, img->w, x1)
+        };
+
+        if (channels == 3) {
+            v128_t r = zero, gr = zero, b = zero;
+            for (int j = 0; j < 4; j++) {
+                v128_t p = vldr_u16_widen_u32_gather_pred((const uint16_t *) img->data, o[j], pred);
+                vrgb_pixels_t rgb = vrgb_rgb565_to_pixels888(p);
+                r = vmla_f32(k[j], vcvt_u32_f32(rgb.r), r);
+                gr = vmla_f32(k[j], vcvt_u32_f32(rgb.g), gr);
+                b = vmla_f32(k[j], vcvt_u32_f32(rgb.b), b);
+            }
+            float *po = out + i * 3;
+            vstr_f32_scatter_pred(po + 0, co, vmul_n_f32(r, 1.0f / 255.0f), pred);
+            vstr_f32_scatter_pred(po + 1, co, vmul_n_f32(gr, 1.0f / 255.0f), pred);
+            vstr_f32_scatter_pred(po + 2, co, vmul_n_f32(b, 1.0f / 255.0f), pred);
+        } else {
+            v128_t v = zero;
+            for (int j = 0; j < 4; j++) {
+                v128_t p = vldr_u8_widen_u32_gather_pred(img->data, o[j], pred);
+                v = vmla_f32(k[j], vcvt_u32_f32(p), v);
+            }
+            vstr_f32_pred(out + i, vmul_n_f32(v, 1.0f / 255.0f), pred);
+        }
+    }
+
+    return mp_const_none;
+}
+MP_DEFINE_CONST_FUN_OBJ_3(py_ml_grid_sample_obj, py_ml_grid_sample);
+
 static ndarray_obj_t *py_ml_audio_ndarray(mp_obj_t obj, uint8_t ndim, const char *name) {
     if (!mp_obj_is_type(obj, &ulab_ndarray_type)) {
         mp_raise_msg_varg(&mp_type_TypeError, MP_ERROR_TEXT("%s must be an ndarray"), name);
