@@ -536,10 +536,18 @@ static MP_DEFINE_CONST_OBJ_TYPE(
     );
 
 extern const mp_obj_type_t py_ml_nms_type;
+#if MICROPY_PY_ML_OPS
+extern const mp_obj_fun_builtin_var_t py_ml_convex_upsample_obj;
+extern const mp_obj_fun_builtin_fixed_t py_ml_depth_to_space_obj;
+#endif
 
 static const mp_rom_map_elem_t py_ml_globals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___name__),            MP_OBJ_NEW_QSTR(MP_QSTR_ml) },
     { MP_ROM_QSTR(MP_QSTR_Model),               MP_ROM_PTR(&py_ml_model_type) },
+    #if MICROPY_PY_ML_OPS
+    { MP_ROM_QSTR(MP_QSTR_convex_upsample),     MP_ROM_PTR(&py_ml_convex_upsample_obj) },
+    { MP_ROM_QSTR(MP_QSTR_depth_to_space),      MP_ROM_PTR(&py_ml_depth_to_space_obj) },
+    #endif
 };
 
 static MP_DEFINE_CONST_DICT(py_ml_globals_dict, py_ml_globals_dict_table);
