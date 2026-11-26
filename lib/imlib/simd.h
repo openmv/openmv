@@ -1302,6 +1302,127 @@ static inline v128_t vmul_n_f32(v128_t v0, float32_t x) {
     #endif
 }
 
+#if (__ARM_ARCH >= 8)
+#define vdup_f32(x) ((v128_t) vdupq_n_f32(x))
+#else
+static inline v128_t vdup_f32(float32_t x) {
+    return (v128_t) {
+        .f32 = { x }
+    };
+}
+#endif
+
+static inline v128_t vadd_f32(v128_t v0, v128_t v1) {
+    #if (__ARM_ARCH >= 8)
+    return (v128_t) vaddq_f32(v0.f32, v1.f32);
+    #else
+    return (v128_t) {
+        .f32 = v0.f32 + v1.f32
+    };
+    #endif
+}
+
+static inline v128_t vsub_f32(v128_t v0, v128_t v1) {
+    #if (__ARM_ARCH >= 8)
+    return (v128_t) vsubq_f32(v0.f32, v1.f32);
+    #else
+    return (v128_t) {
+        .f32 = v0.f32 - v1.f32
+    };
+    #endif
+}
+
+static inline v128_t vmul_f32(v128_t v0, v128_t v1) {
+    #if (__ARM_ARCH >= 8)
+    return (v128_t) vmulq_f32(v0.f32, v1.f32);
+    #else
+    return (v128_t) {
+        .f32 = v0.f32 * v1.f32
+    };
+    #endif
+}
+
+// Returns v0 * v1 + v2.
+static inline v128_t vmla_f32(v128_t v0, v128_t v1, v128_t v2) {
+    #if (__ARM_ARCH >= 8)
+    return (v128_t) vfmaq_f32(v2.f32, v0.f32, v1.f32);
+    #else
+    return (v128_t) {
+        .f32 = (v0.f32 * v1.f32) + v2.f32
+    };
+    #endif
+}
+
+// Returns v0 * x + v2.
+static inline v128_t vmla_n_f32(v128_t v0, float32_t x, v128_t v2) {
+    #if (__ARM_ARCH >= 8)
+    return (v128_t) vfmaq_n_f32(v2.f32, v0.f32, x);
+    #else
+    return (v128_t) {
+        .f32 = (v0.f32 * x) + v2.f32
+    };
+    #endif
+}
+
+// Returns the smaller of each pair, or the number if one is not a number.
+static inline v128_t vmin_f32(v128_t v0, v128_t v1) {
+    #if (__ARM_ARCH >= 8)
+    return (v128_t) vminnmq_f32(v0.f32, v1.f32);
+    #else
+    return (v128_t) {
+        .f32 = { fminf(v0.f32[0], v1.f32[0]) }
+    };
+    #endif
+}
+
+// Returns the larger of each pair, or the number if one is not a number.
+static inline v128_t vmax_f32(v128_t v0, v128_t v1) {
+    #if (__ARM_ARCH >= 8)
+    return (v128_t) vmaxnmq_f32(v0.f32, v1.f32);
+    #else
+    return (v128_t) {
+        .f32 = { fmaxf(v0.f32[0], v1.f32[0]) }
+    };
+    #endif
+}
+
+// Returns v0 / v1. Helium has no divide: the reciprocal of v1 is estimated from its
+// bits and refined with 3 Newton-Raphson steps, to about 1 ulp for normal numbers.
+static inline v128_t vdiv_f32(v128_t v0, v128_t v1) {
+    #if (__ARM_ARCH >= 8)
+    float32x4_t r = vreinterpretq_f32_s32(vsubq_s32(vdupq_n_s32(0x7EF311C7), vreinterpretq_s32_f32(v1.f32)));
+    r = vmulq_f32(r, vfmsq_f32(vdupq_n_f32(2.0f), v1.f32, r));
+    r = vmulq_f32(r, vfmsq_f32(vdupq_n_f32(2.0f), v1.f32, r));
+    r = vmulq_f32(r, vfmsq_f32(vdupq_n_f32(2.0f), v1.f32, r));
+    return (v128_t) vmulq_f32(v0.f32, r);
+    #else
+    return (v128_t) {
+        .f32 = v0.f32 / v1.f32
+    };
+    #endif
+}
+
+static inline v128_t vfloor_f32(v128_t v0) {
+    #if (__ARM_ARCH >= 8)
+    return (v128_t) vrndmq_f32(v0.f32);
+    #else
+    return (v128_t) {
+        .f32 = { floorf(v0.f32[0]) }
+    };
+    #endif
+}
+
+// Converts float32 to int32, rounding toward zero.
+static inline v128_t vcvt_f32_s32(v128_t v0) {
+    #if (__ARM_ARCH >= 8)
+    return (v128_t) vcvtq_s32_f32(v0.f32);
+    #else
+    return (v128_t) {
+        .s32 = { (int32_t) v0.f32[0] }
+    };
+    #endif
+}
+
 static inline v128_t vmla_n_u16(v128_t v0, uint16_t x, v128_t v2) {
     #if (__ARM_ARCH >= 8)
     return (v128_t) vmlaq_n_u16(v2.u16, v0.u16, x);
@@ -1761,6 +1882,16 @@ static inline void vstr_u16_narrow_u8_pred(uint8_t *p, v128_t v0, v128_predicate
     #endif
 }
 
+static inline void vstr_u32_narrow_u8_pred(uint8_t *p, v128_t v0, v128_predicate_t pred) {
+    #if (__ARM_ARCH >= 8)
+    vstrbq_p_u32(p, v0.u32, pred);
+    #else
+    if (pred) {
+        *p = v0.u32[0];
+    }
+    #endif
+}
+
 static inline void vstr_u16_narrow_u8_scatter(uint8_t *p, v128_t offsets, v128_t v0) {
     #if (__ARM_ARCH >= 8)
     vstrbq_scatter_offset(p, offsets.u16, v0.u16);
@@ -1844,6 +1975,36 @@ static inline void vstr_f32_scatter(float32_t *p, v128_t offsets, v128_t v0) {
     vstrwq_scatter_shifted_offset(p, offsets.u32, v0.f32);
     #else
     *(p + offsets.u32[0]) = v0.f32[0];
+    #endif
+}
+
+static inline void vstr_f32_scatter_pred(float32_t *p, v128_t offsets, v128_t v0, v128_predicate_t pred) {
+    #if (__ARM_ARCH >= 8)
+    vstrwq_scatter_shifted_offset_p(p, offsets.u32, v0.f32, pred);
+    #else
+    if (pred) {
+        *(p + offsets.u32[0]) = v0.f32[0];
+    }
+    #endif
+}
+
+static inline v128_t vldr_f32_pred(const float32_t *p, v128_predicate_t pred) {
+    #if (__ARM_ARCH >= 8)
+    return (v128_t) vldrwq_z_f32(p, pred);
+    #else
+    return (v128_t) {
+        .f32 = { pred ? p[0] : 0.0f }
+    };
+    #endif
+}
+
+static inline void vstr_f32_pred(float32_t *p, v128_t v0, v128_predicate_t pred) {
+    #if (__ARM_ARCH >= 8)
+    vstrwq_p_f32(p, v0.f32, pred);
+    #else
+    if (pred) {
+        p[0] = v0.f32[0];
+    }
     #endif
 }
 
