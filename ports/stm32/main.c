@@ -87,6 +87,7 @@
 #include "omv_gpio.h"
 #include "omv_i2c.h"
 #include "omv_csi.h"
+#include "py_csi_ng.h"
 #include "omv_protocol.h"
 #include "mp_utils.h"
 #include "framebuffer.h"
@@ -238,6 +239,9 @@ soft_reset:
     uart_init0();
     omv_gpio_init0();
     framebuffer_init0();
+    #if MICROPY_PY_CSI_NG
+    py_csi_init0();
+    #endif
     #if MICROPY_PY_CSI
     omv_csi_init0();
     #endif

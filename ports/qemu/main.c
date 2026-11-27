@@ -46,6 +46,7 @@
 #include "umalloc.h"
 #include "framebuffer.h"
 #include "omv_csi.h"
+#include "py_csi_ng.h"
 
 #if MICROPY_PY_LWIP
 #include "lwip/init.h"
@@ -82,6 +83,9 @@ soft_reset:
 
     imlib_init();
 
+    #if MICROPY_PY_CSI_NG
+    py_csi_init0();
+    #endif
     #if MICROPY_PY_CSI
     omv_csi_init0();
 

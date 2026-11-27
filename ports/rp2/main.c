@@ -63,6 +63,7 @@
 #include "framebuffer.h"
 #include "omv_i2c.h"
 #include "omv_csi.h"
+#include "py_csi_ng.h"
 #include "usbdbg.h"
 #include "tinyusb_debug.h"
 #include "py_fir.h"
@@ -183,6 +184,9 @@ soft_reset:
 
     uma_init();
     framebuffer_init0();
+    #if MICROPY_PY_CSI_NG
+    py_csi_init0();
+    #endif
     #if MICROPY_PY_CSI
     omv_csi_init0();
     #endif
