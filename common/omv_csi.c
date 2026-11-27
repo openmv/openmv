@@ -307,7 +307,7 @@ __weak int omv_csi_abort(omv_csi_t *csi, bool fifo_flush, bool in_irq) {
         framebuffer_flush(csi->fb);
     }
 
-    if (csi->fsync_pin) {
+    if (csi->fsync_pin && csi->trigger_mode == OMV_CSI_TRIGGER_OUT) {
         omv_gpio_write(csi->fsync_pin, 0);
     }
 
@@ -353,6 +353,7 @@ __weak int omv_csi_reset(omv_csi_t *csi, bool hard) {
     #endif // MICROPY_PY_IMU
     csi->color_palette = rainbow_table;
     csi->disable_full_flush = false;
+    omv_csi_set_trigger_mode(csi, OMV_CSI_TRIGGER_OFF);
     csi->vsync_cb = (omv_csi_cb_t) {
         NULL, NULL
     };
@@ -638,9 +639,8 @@ int omv_csi_probe(omv_i2c_t *i2c) {
             return OMV_CSI_ERROR_ISC_INIT_FAILED;
         }
 
-        if (csi->fsync_pin) {
-            omv_gpio_config(csi->fsync_pin, OMV_GPIO_MODE_OUTPUT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_LOW, -1);
-        }
+        // The frame sync pin is not driven until the trigger out mode is enabled.
+        omv_csi_set_trigger_mode(csi, OMV_CSI_TRIGGER_OFF);
 
         // Sensors can change the clock's frequency or disable it
         // (with clk_hz=0). This is allowed only if the clock is
@@ -1712,6 +1712,19 @@ __weak int omv_csi_set_lens_correction(omv_csi_t *csi, int enable, int radi, int
     return 0;
 }
 
+void omv_csi_set_trigger_mode(omv_csi_t *csi, omv_csi_trigger_mode_t mode) {
+    csi->trigger_mode = mode;
+
+    if (csi->fsync_pin) {
+        if (mode == OMV_CSI_TRIGGER_OUT) {
+            omv_gpio_config(csi->fsync_pin, OMV_GPIO_MODE_OUTPUT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_LOW, -1);
+            omv_gpio_write(csi->fsync_pin, 0);
+        } else {
+            omv_gpio_config(csi->fsync_pin, OMV_GPIO_MODE_INPUT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_LOW, -1);
+        }
+    }
+}
+
 __weak int omv_csi_ioctl(omv_csi_t *csi, int request, void *arg) {
     // Disable any ongoing frame capture.
     if (request & OMV_CSI_IOCTL_FLAG_ABORT) {
@@ -1966,16 +1979,21 @@ __weak int omv_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
         csi->fb->pending = false;
     }
 
-    // Toggle FSYNC.
-    if (csi->fsync_pin) {
+    // Trigger the sensor.
+    bool trigger = csi->fsync_pin && csi->trigger_mode == OMV_CSI_TRIGGER_OUT;
+
+    if (trigger) {
         omv_gpio_write(csi->fsync_pin, 1);
+    } else if (csi->trigger_mode == OMV_CSI_TRIGGER_SOFT) {
+        if (omv_csi_ioctl(csi, OMV_CSI_IOCTL_SOFT_TRIGGER, NULL) != 0) {
+            return OMV_CSI_ERROR_CTL_FAILED;
+        }
     }
 
     // Call the sensor specific function.
     int ret = csi->snapshot(csi, image, flags);
 
-    // Toggle FSYNC.
-    if (csi->fsync_pin) {
+    if (trigger) {
         omv_gpio_write(csi->fsync_pin, 0);
     }
 

@@ -1140,7 +1140,7 @@ static const py_csi_ioctl_desc_t py_csi_ioctl_table[] = {
     { OMV_CSI_IOCTL_SET_READOUT_WINDOW,    1, 1, "W",  "",     NULL, NULL },
     { OMV_CSI_IOCTL_GET_READOUT_WINDOW,    0, 0, "",   "iiii", NULL, NULL },
     { OMV_CSI_IOCTL_SET_TRIGGERED_MODE,    1, 1, "i",  "",     NULL, NULL },
-    { OMV_CSI_IOCTL_GET_TRIGGERED_MODE,    0, 0, "",   "b",    NULL, NULL },
+    { OMV_CSI_IOCTL_GET_TRIGGERED_MODE,    0, 0, "",   "i",    NULL, NULL },
     { OMV_CSI_IOCTL_SET_FOV_WIDE,          1, 1, "i",  "",     NULL, NULL },
     { OMV_CSI_IOCTL_GET_FOV_WIDE,          0, 0, "",   "b",    NULL, NULL },
     { OMV_CSI_IOCTL_TRIGGER_AUTO_FOCUS,    0, 0, "",   "",     NULL, NULL },
@@ -1573,6 +1573,12 @@ static const mp_rom_map_elem_t globals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_QXGA),            MP_ROM_INT(OMV_CSI_FRAMESIZE_QXGA) },     /* 2048x1536 */
     { MP_ROM_QSTR(MP_QSTR_WQXGA),           MP_ROM_INT(OMV_CSI_FRAMESIZE_WQXGA) },    /* 2560x1600 */
     { MP_ROM_QSTR(MP_QSTR_WQXGA2),          MP_ROM_INT(OMV_CSI_FRAMESIZE_WQXGA2) },   /* 2592x1944 */
+
+    // Triggered modes
+    { MP_ROM_QSTR(MP_QSTR_TRIGGER_OFF),     MP_ROM_INT(OMV_CSI_TRIGGER_OFF) },
+    { MP_ROM_QSTR(MP_QSTR_TRIGGER_OUT),     MP_ROM_INT(OMV_CSI_TRIGGER_OUT) },
+    { MP_ROM_QSTR(MP_QSTR_TRIGGER_IN),      MP_ROM_INT(OMV_CSI_TRIGGER_IN) },
+    { MP_ROM_QSTR(MP_QSTR_TRIGGER_SOFT),    MP_ROM_INT(OMV_CSI_TRIGGER_SOFT) },
 
     // OMV_CSI_IOCTLs
     { MP_ROM_QSTR(MP_QSTR_IOCTL_SET_READOUT_WINDOW),    MP_ROM_INT(OMV_CSI_IOCTL_SET_READOUT_WINDOW) },

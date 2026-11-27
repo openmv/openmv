@@ -453,9 +453,12 @@ static void stm_csi_frame_event(omv_csi_t *csi, uint32_t pipe) {
     #if defined(OMV_CSI_STATS_ENABLE)
     if (csi->raw_output && csi->stats_enabled && !csi->stats.initialized) {
         stm_isp_update_awb(csi, DCMIPP_PIPE);
-        csi->drop_frame = true;
-        // A triggered sensor outputs one frame per trigger, so snapshot triggers it again.
-        csi->retrigger = true;
+        // An externally triggered frame can't be replaced, so it's kept.
+        if (csi->trigger_mode != OMV_CSI_TRIGGER_IN) {
+            csi->drop_frame = true;
+            // A triggered sensor outputs one frame per trigger, so snapshot triggers it again.
+            csi->retrigger = true;
+        }
     }
     #endif // OMV_CSI_STATS_ENABLE
 
@@ -743,14 +746,17 @@ static int stm_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
             break;
         }
 
-        // The frame was dropped, so trigger the sensor again. The frame sync pin is high
-        // during snapshot, so it's pulsed low. Free running sensors ignore it.
+        // The frame was dropped, so trigger the sensor again. Free running sensors don't need it.
         if (csi->retrigger) {
             csi->retrigger = false;
-            if (csi->fsync_pin) {
+            if (csi->fsync_pin && csi->trigger_mode == OMV_CSI_TRIGGER_OUT) {
                 omv_gpio_write(csi->fsync_pin, 0);
                 mp_hal_delay_us(100);
                 omv_gpio_write(csi->fsync_pin, 1);
+            } else if (csi->trigger_mode == OMV_CSI_TRIGGER_SOFT) {
+                if (omv_csi_ioctl(csi, OMV_CSI_IOCTL_SOFT_TRIGGER, NULL) != 0) {
+                    return OMV_CSI_ERROR_CTL_FAILED;
+                }
             }
         }
 
@@ -759,7 +765,10 @@ static int stm_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
         }
 
         if ((mp_hal_ticks_ms() - start) > OMV_CSI_TIMEOUT_MS) {
-            omv_csi_abort(csi, true, false);
+            // Stay ready for the next frame in trigger in mode, a timeout just means no trigger.
+            if (csi->trigger_mode != OMV_CSI_TRIGGER_IN) {
+                omv_csi_abort(csi, true, false);
+            }
             return OMV_CSI_ERROR_CAPTURE_TIMEOUT;
         }
     }
