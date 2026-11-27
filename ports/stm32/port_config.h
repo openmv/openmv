@@ -124,6 +124,9 @@ typedef struct _omv_i3c_frame {
         uint8_t cw_size;                                  \
         uint8_t cw_buf[OMV_I3C_CW_BUF_SIZE];              \
     };
+
+// Legacy I2C targets on an I3C bus are reached through its controller.
+#define OMV_I2C_PORT_BITS   struct _omv_i3c *i3c;
 #endif
 
 #if defined(STM32N6)
