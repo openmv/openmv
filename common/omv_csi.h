@@ -103,6 +103,8 @@
 #define PAJ6100_ID              (0x6100)
 #define FROGEYE2020_ID          (0x2020)
 #define SOFTCSI_ID              (0x50F7)
+// Bits [47:16] of the I3C provisioned ID, the manufacturer and part IDs.
+#define VL53L9CX_ID             (0x02080102)
 
 #define OMV_CSI_TIMEOUT_MS      (3000)
 
@@ -112,6 +114,11 @@
 
 #ifndef OMV_CSI_MAX_DEVICES
 #define OMV_CSI_MAX_DEVICES     (1)
+#endif
+
+// Enables the shared time-of-flight ioctls in the csi module.
+#ifndef OMV_CSI_TOF_ENABLE
+#define OMV_CSI_TOF_ENABLE      (0)
 #endif
 
 typedef enum {
@@ -219,6 +226,7 @@ typedef enum {
     OMV_CSI_IOCTL_FAMILY_HIMAX    = 2,
     OMV_CSI_IOCTL_FAMILY_GENX320  = 3,
     OMV_CSI_IOCTL_FAMILY_BOSON    = 4,
+    OMV_CSI_IOCTL_FAMILY_TOF      = 5,
     // Not reachable from Python.
     OMV_CSI_IOCTL_FAMILY_INTERNAL = 15,
 } omv_csi_ioctl_family_t;
@@ -320,6 +328,16 @@ typedef enum {
     OMV_CSI_IOCTL_BOSON_GET_TEMP_FROM_COUNTS      = 0x420,
     OMV_CSI_IOCTL_BOSON_GET_RBFO                  = 0x421,
 
+    // Time-of-flight sensors.
+    OMV_CSI_IOCTL_TOF_GET_PLANES                  = 0x500,
+    OMV_CSI_IOCTL_TOF_SET_PLANES                  = 0x501,
+    OMV_CSI_IOCTL_TOF_GET_ENABLED_PLANES          = 0x502,
+    OMV_CSI_IOCTL_TOF_READ_PLANES                 = 0x503,
+    OMV_CSI_IOCTL_TOF_SET_RANGE                   = 0x504,
+    OMV_CSI_IOCTL_TOF_GET_RANGE                   = 0x505,
+    OMV_CSI_IOCTL_TOF_SET_MODE                    = 0x506,
+    OMV_CSI_IOCTL_TOF_GET_MODE                    = 0x507,
+
     // Internal requests, not exported to Python.
     OMV_CSI_IOCTL_UPDATE_AGC_AEC                  = 0xF00,
 } omv_csi_ioctl_t;
@@ -342,6 +360,36 @@ typedef union {
         uint32_t b;
     } rgb_stats;
 } omv_csi_ioctl_arg_t;
+
+// Planes of the time-of-flight sensors, which have the same units on every
+// sensor. OMV_CSI_IOCTL_TOF_GET_PLANES returns the ones a sensor supports.
+typedef enum {
+    OMV_CSI_TOF_PLANE_DEPTH   = (1 << 0),   // Distance in mm, 0 without a valid return.
+    OMV_CSI_TOF_PLANE_SIGNAL  = (1 << 1),   // Signal per SPAD.
+    OMV_CSI_TOF_PLANE_AMBIENT = (1 << 2),   // Ambient light per SPAD.
+    OMV_CSI_TOF_PLANE_SPADS   = (1 << 3),   // Number of SPADs.
+    OMV_CSI_TOF_PLANE_SNR     = (1 << 4),   // Signal to noise ratio, linear.
+    OMV_CSI_TOF_PLANE_SIGMA   = (1 << 5),   // Distance standard deviation in mm.
+    OMV_CSI_TOF_PLANE_STATUS  = (1 << 6),   // Sensor specific status code.
+} omv_csi_tof_plane_t;
+
+// Ranging modes of the time-of-flight sensors that have them.
+typedef enum {
+    OMV_CSI_TOF_MODE_PRECISION = 0,     // The best accuracy, the default.
+    OMV_CSI_TOF_MODE_RANGE     = 1,     // The longest range, with noisier distances.
+} omv_csi_tof_mode_t;
+
+// Argument for the OMV_CSI_IOCTL_TOF_* requests.
+typedef union {
+    int32_t ivalue;                     // "i"
+    struct {
+        int32_t min;
+        int32_t max;
+    } range;                            // "ii", in mm
+    // The enabled planes of each zone, in bit order, as a float array of
+    // shape (height, width, enabled planes).
+    float *planes;                      // custom in
+} omv_csi_tof_ioctl_arg_t;
 
 typedef enum {
     OMV_CSI_ERROR_NO_ERROR              =  0,
@@ -555,6 +603,8 @@ typedef struct _omv_csi {
     int (*abort) (omv_csi_t *csi, bool fifo_flush, bool in_irq);
     int (*snapshot) (omv_csi_t *csi, image_t *image, uint32_t flags);
     int (*post_process) (omv_csi_t *csi, image_t *image, uint32_t flags);
+    // Returns the size of the sensor's frames, for frames larger than the image.
+    size_t (*get_framebuffer_size) (omv_csi_t *csi);
     int (*isp_reset) (omv_csi_t *csi);
 } omv_csi_t;
 
