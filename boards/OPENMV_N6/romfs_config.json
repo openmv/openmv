@@ -63,6 +63,12 @@
       "profile": "default"
     },
     {
+      "type": "tflite",
+      "path": "{TOP}/lib/models/lepton_sr.tflite",
+      "alignment": 32,
+      "profile": "default"
+    },
+    {
       "type": "haar",
       "path": "{TOP}/lib/haar/haarcascade_eye.xml",
       "stages": 0
