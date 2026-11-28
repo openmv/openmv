@@ -148,3 +148,25 @@ debug-paths-dev:
 	@echo "DEV_MOUNTS        = $(DEV_MOUNTS)"
 
 .DEFAULT_GOAL := build-firmware
+
+# Unix targets do not mount the SDK; output goes to build/UNIX.
+UNIX_DOCKER_ARGS = --rm \
+        --user $(shell id -u):$(shell id -g) \
+        -e HOME=/tmp \
+        $(foreach v,DEBUG MICROPY_PY_UNITTEST MICROPY_PY_UMALLOC,$(if $(strip $($(v))),-e $(v)=$($(v)))) \
+        -w $(DEV_REPO_ROOT) \
+        -v $(DEV_REPO_ROOT):$(DEV_REPO_ROOT) \
+        $(if $(strip $(DEV_MAIN_REPO)),-v $(DEV_MAIN_REPO):$(DEV_MAIN_REPO))
+
+build-unix: build-image
+	docker run $(UNIX_DOCKER_ARGS) -e TARGET=UNIX \
+        $(DOCKER_IMAGE_NAME):$(DOCKER_TAG) docker/build-dev.sh
+
+test-unix: build-image
+	docker run $(UNIX_DOCKER_ARGS) \
+        $(DOCKER_IMAGE_NAME):$(DOCKER_TAG) \
+        bash -c 'source tools/ci.sh && ci_run_unix_tests $(DEV_REPO_ROOT)/build/UNIX/bin/micropython'
+
+shell-unix: build-image
+	docker run $(UNIX_DOCKER_ARGS) -it \
+        $(DOCKER_IMAGE_NAME):$(DOCKER_TAG) bash

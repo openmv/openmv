@@ -42,5 +42,7 @@ COMMON_SRC_C += \
     omv_profiler.c \
     umalloc.c \
 
+ifneq ($(PORT),unix)
 CFLAGS += -I$(TOP_DIR)/common
 OMV_FIRM_OBJ += $(addprefix $(BUILD)/common/, $(COMMON_SRC_C:.c=.o))
+endif

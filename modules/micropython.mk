@@ -30,6 +30,11 @@ OMV_PORT_MOD_DIR := $(OMV_MOD_DIR)/../ports/$(PORT)/modules
 SRC_USERMOD += $(wildcard $(OMV_PORT_MOD_DIR)/*.c)
 SRC_USERMOD_CXX += $(wildcard $(OMV_PORT_MOD_DIR)/*.cpp)
 
+# Add Unix port-specific source files, include paths and warning suppressions.
+ifeq ($(PORT),unix)
+include $(OMV_MOD_DIR)/../ports/unix/usermod.mk
+endif
+
 # Extra module flags.
 CFLAGS_USERMOD += \
         -std=gnu11 \

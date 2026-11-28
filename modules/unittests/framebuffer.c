@@ -280,6 +280,49 @@ static mp_obj_t test_framebuffer_acquire_release(void) {
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(test_framebuffer_acquire_release_obj, test_framebuffer_acquire_release);
 
+#if OMV_OS_UNIX
+#include "apriltag_config.h"
+#include "umalloc.h"
+
+__attribute__((noinline)) static size_t framebuffer_test_nested_stack(void) {
+    volatile uint8_t reserve[4096];
+    reserve[0] = 1;
+    size_t available = _apriltag_stack_avail();
+    reserve[sizeof(reserve) - 1] = reserve[0];
+    return available;
+}
+
+static mp_obj_t test_framebuffer_host_stack_accounting(void) {
+    size_t available = _apriltag_stack_avail();
+    size_t nested = framebuffer_test_nested_stack();
+    #if MICROPY_STACK_CHECK
+    return mp_obj_new_bool(available > nested && available - nested >= 2048 &&
+                           available <= MP_STATE_THREAD(stack_limit));
+    #else
+    return mp_obj_new_bool(available == 0 && nested == 0);
+    #endif
+}
+static MP_DEFINE_CONST_FUN_OBJ_0(test_framebuffer_host_stack_accounting_obj, test_framebuffer_host_stack_accounting);
+
+static mp_obj_t test_framebuffer_stream_reset(void) {
+    framebuffer_t *main = framebuffer_get(FB_MAINFB_ID);
+    framebuffer_t *stream = framebuffer_get(FB_STREAM_ID);
+    bool enabled = stream->enabled;
+    uma_free(main->raw_base);
+    main->raw_base = NULL;
+    stream->enabled = true;
+    memset(stream->raw_base, 0x5a, sizeof(framebuffer_header_t));
+    framebuffer_init0();
+    bool passed = main->dynamic && main->raw_base == NULL && stream->enabled;
+    for (size_t i = 0; i < sizeof(framebuffer_header_t); i++) {
+        passed = passed && stream->raw_base[i] == 0;
+    }
+    stream->enabled = enabled;
+    return mp_obj_new_bool(passed);
+}
+static MP_DEFINE_CONST_FUN_OBJ_0(test_framebuffer_stream_reset_obj, test_framebuffer_stream_reset);
+#endif
+
 // Module definition
 static const mp_rom_map_elem_t unittest_fb_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR___name__), MP_ROM_QSTR(MP_QSTR_unittest_fb) },
@@ -289,6 +332,10 @@ static const mp_rom_map_elem_t unittest_fb_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_test_framebuffer_resize), MP_ROM_PTR(&test_framebuffer_resize_obj) },
     { MP_ROM_QSTR(MP_QSTR_test_framebuffer_flush), MP_ROM_PTR(&test_framebuffer_flush_obj) },
     { MP_ROM_QSTR(MP_QSTR_test_framebuffer_acquire_release), MP_ROM_PTR(&test_framebuffer_acquire_release_obj) },
+    #if OMV_OS_UNIX
+    { MP_ROM_QSTR(MP_QSTR_test_framebuffer_host_stack_accounting), MP_ROM_PTR(&test_framebuffer_host_stack_accounting_obj) },
+    { MP_ROM_QSTR(MP_QSTR_test_framebuffer_stream_reset), MP_ROM_PTR(&test_framebuffer_stream_reset_obj) },
+    #endif
 };
 
 static MP_DEFINE_CONST_DICT(unittest_fb_module_globals, unittest_fb_module_globals_table);
