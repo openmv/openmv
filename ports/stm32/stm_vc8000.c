@@ -177,10 +177,18 @@ void EWLReleaseHw(const void *inst) {
 
 i32 EWLMallocLinear(const void *inst, u32 size, EWLLinearMem_t *info) {
     (void) inst;
-    void *ptr = uma_malloc(size, UMA_CACHE | UMA_MAYBE | UMA_FAST);
+    // UMA_PERSIST: encoder buffers live across VM execution and must
+    // survive the uma_collect() called by MICROPY_VM_HOOK_EXC on caught
+    // exceptions. They are freed explicitly by EWLFreeLinear.
+    void *ptr = uma_malloc(size, UMA_CACHE | UMA_MAYBE | UMA_FAST | UMA_PERSIST);
     if (ptr == NULL) {
         return EWL_ERROR;
     }
+    // A recycled block can carry a previous owner's dirty cache lines
+    // (e.g. the JPEG compressor's); most encoder buffers are only ever
+    // hardware-written, so a late eviction would corrupt them. Retire
+    // the lines now (the allocation is cache-line aligned and padded).
+    SCB_InvalidateDCache_by_Addr(ptr, OMV_ALIGN_TO(size, OMV_CACHE_LINE_SIZE));
     info->virtualAddress = (u32 *) ptr;
     info->busAddress = (ptr_t) ptr;
     info->size = OMV_ALIGN_TO(size, OMV_CACHE_LINE_SIZE);
@@ -208,11 +216,12 @@ void EWLFreeRefFrm(const void *inst, EWLLinearMem_t *info) {
 // ---------------------------------------------------------------------------
 
 void *EWLmalloc(u32 n) {
-    return uma_malloc(n, UMA_MAYBE | UMA_FAST);
+    // UMA_PERSIST: see EWLMallocLinear.
+    return uma_malloc(n, UMA_MAYBE | UMA_FAST | UMA_PERSIST);
 }
 
 void *EWLcalloc(u32 n, u32 s) {
-    return uma_calloc(n * s, UMA_MAYBE | UMA_FAST);
+    return uma_calloc(n * s, UMA_MAYBE | UMA_FAST | UMA_PERSIST);
 }
 
 void EWLfree(void *p) {
