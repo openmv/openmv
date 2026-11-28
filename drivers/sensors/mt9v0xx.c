@@ -254,6 +254,19 @@ static int set_framesize(omv_csi_t *csi, omv_csi_framesize_t framesize) {
     return ret;
 }
 
+// The sensor's shadow registers update on the next frame, so capture one. That frame, and any
+// other frames in the frame buffer, have the previous settings, so they're dropped afterwards.
+static int update_shadow_registers(omv_csi_t *csi) {
+    int ret = 0;
+
+    if (!csi->disable_delays) {
+        ret = csi->snapshot(csi, NULL, 0);
+        omv_csi_abort(csi, true, false);
+    }
+
+    return ret;
+}
+
 static int set_colorbar(omv_csi_t *csi, int enable) {
     int mask = (is_mt9v0x4(csi))
         ? (MT9V0X4_ROW_NOISE_CORR_ENABLE | MT9V0X4_ROW_NOISE_CORR_ENABLE_B)
@@ -266,9 +279,7 @@ static int set_colorbar(omv_csi_t *csi, int enable) {
     ret = omv_i2c_read_reg(csi->i2c, csi->slv_addr, MT9V0XX_ROW_NOISE_CORR_CONTROL, 1, &reg, 2);
     ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, MT9V0XX_ROW_NOISE_CORR_CONTROL, 1,
                              (reg & (~mask)) | ((enable == 0) ? mask : 0), 2);
-    if (!csi->disable_delays) {
-        ret |= csi->snapshot(csi, NULL, 0); // Force shadow mode register to update...
-    }
+    ret |= update_shadow_registers(csi);
     return ret;
 }
 
@@ -280,9 +291,7 @@ static int set_auto_gain(omv_csi_t *csi, int enable, float gain_db, float gain_d
     int ret = omv_i2c_read_reg(csi->i2c, csi->slv_addr, MT9V0XX_AEC_AGC_ENABLE, 1, &reg, 2);
     ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, MT9V0XX_AEC_AGC_ENABLE, 1,
                              (reg & (~agc_mask)) | ((enable != 0) ? agc_mask : 0), 2);
-    if (!csi->disable_delays) {
-        ret |= csi->snapshot(csi, NULL, 0); // Force shadow mode register to update...
-    }
+    ret |= update_shadow_registers(csi);
 
     if ((enable == 0) && (!isnanf(gain_db)) && (!isinff(gain_db))) {
         int gain = IM_CLAMP(fast_roundf(expf((gain_db / 20.0f) * M_LN10) * 16.0f), 16, 64);
@@ -332,9 +341,7 @@ static int set_auto_exposure(omv_csi_t *csi, int enable, int exposure_us) {
     ret |= omv_i2c_read_reg(csi->i2c, csi->slv_addr, MT9V0XX_AEC_AGC_ENABLE, 1, &reg, 2);
     ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, MT9V0XX_AEC_AGC_ENABLE, 1,
                              (reg & (~aec_mask)) | ((enable != 0) ? aec_mask : 0), 2);
-    if (!csi->disable_delays) {
-        ret |= csi->snapshot(csi, NULL, 0); // Force shadow mode register to update...
-    }
+    ret |= update_shadow_registers(csi);
     int read_mode = context ? MT9V0X4_READ_MODE_B : MT9V0XX_READ_MODE;
     int window_width = context ? MT9V0X4_WINDOW_WIDTH_B : MT9V0XX_WINDOW_WIDTH;
     int horizontal_blanking = context ? MT9V0X4_HORIZONTAL_BLANKING_B : MT9V0XX_HORIZONTAL_BLANKING;
@@ -418,9 +425,7 @@ static int set_hmirror(omv_csi_t *csi, int enable) {
                                  2);
     }
 
-    if (!csi->disable_delays) {
-        ret |= csi->snapshot(csi, NULL, 0); // Force shadow mode register to update...
-    }
+    ret |= update_shadow_registers(csi);
     return ret;
 }
 
@@ -441,9 +446,7 @@ static int set_vflip(omv_csi_t *csi, int enable) {
                                  2);
     }
 
-    if (!csi->disable_delays) {
-        ret |= csi->snapshot(csi, NULL, 0); // Force shadow mode register to update...
-    }
+    ret |= update_shadow_registers(csi);
     return ret;
 }
 
@@ -501,9 +504,7 @@ static int ioctl(omv_csi_t *csi, int request, void *arg) {
             ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, MT9V0XX_CHIP_CONTROL, 1,
                                      (chip_control & (~MT9V0XX_CHIP_CONTROL_MODE_MASK))
                                      | ((enable != 0) ? MT9V0XX_CHIP_CONTROL_SNAP_MODE : MT9V0XX_CHIP_CONTROL_MASTER_MODE), 2);
-            if (!csi->disable_delays) {
-                ret |= csi->snapshot(csi, NULL, 0); // Force shadow mode register to update...
-            }
+            ret |= update_shadow_registers(csi);
             break;
         }
         case OMV_CSI_IOCTL_GET_TRIGGERED_MODE: {

@@ -299,6 +299,7 @@ __weak int omv_csi_abort(omv_csi_t *csi, bool fifo_flush, bool in_irq) {
 
     csi->first_line = false;
     csi->drop_frame = false;
+    csi->retrigger = false;
     csi->last_frame_ms = 0;
     csi->last_frame_ms_valid = false;
 
@@ -338,6 +339,7 @@ __weak int omv_csi_reset(omv_csi_t *csi, bool hard) {
     csi->framerate = 0;
     csi->first_line = false;
     csi->drop_frame = false;
+    csi->retrigger = false;
     csi->last_frame_ms = 0;
     csi->last_frame_ms_valid = false;
     csi->gainceiling = 0;
