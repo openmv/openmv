@@ -28,4 +28,5 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 # An extension package to the ml C module.
+from uml import *  # noqa
 from .model import *  # noqa
