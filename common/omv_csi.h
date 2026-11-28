@@ -132,6 +132,14 @@ typedef enum {
     OMV_CSI_SDE_NEGATIVE,
 } omv_csi_sde_t;
 
+// OMV_CSI_IOCTL_SET_TRIGGERED_MODE values. The first two match false/true.
+typedef enum {
+    OMV_CSI_TRIGGER_OFF  = 0,   // The sensor free runs.
+    OMV_CSI_TRIGGER_OUT  = 1,   // snapshot() drives the frame sync pin to trigger the sensor.
+    OMV_CSI_TRIGGER_IN   = 2,   // An external device drives the frame sync pin to trigger the sensor.
+    OMV_CSI_TRIGGER_SOFT = 3,   // snapshot() sends the sensor a command to trigger it.
+} omv_csi_trigger_mode_t;
+
 typedef enum {
     OMV_CSI_ATTR_CONTRAST=0,
     OMV_CSI_ATTR_BRIGHTNESS,
@@ -236,7 +244,7 @@ typedef enum {
     // Common requests, implemented by any sensor.
     OMV_CSI_IOCTL_SET_READOUT_WINDOW              = 0x000 | OMV_CSI_IOCTL_FLAG_ABORT,
     OMV_CSI_IOCTL_GET_READOUT_WINDOW              = 0x001,
-    OMV_CSI_IOCTL_SET_TRIGGERED_MODE              = 0x002,
+    OMV_CSI_IOCTL_SET_TRIGGERED_MODE              = 0x002 | OMV_CSI_IOCTL_FLAG_ABORT,
     OMV_CSI_IOCTL_GET_TRIGGERED_MODE              = 0x003,
     OMV_CSI_IOCTL_SET_FOV_WIDE                    = 0x004,
     OMV_CSI_IOCTL_GET_FOV_WIDE                    = 0x005,
@@ -322,6 +330,7 @@ typedef enum {
 
     // Internal requests, not exported to Python.
     OMV_CSI_IOCTL_UPDATE_AGC_AEC                  = 0xF00,
+    OMV_CSI_IOCTL_SOFT_TRIGGER                    = 0xF01,
 } omv_csi_ioctl_t;
 
 typedef struct {
@@ -462,11 +471,13 @@ typedef struct _omv_csi {
 
     // Sensor state
     omv_csi_sde_t sde;          // Special digital effects
+    omv_csi_trigger_mode_t trigger_mode;    // Triggered mode
     pixformat_t pixformat;      // Pixel format
     omv_csi_framesize_t framesize;  // Frame size
     int framerate;              // Frame rate
     bool first_line;            // Set to true when the first line of the frame is being read.
     bool drop_frame;            // Set to true to drop the current frame.
+    bool retrigger;             // Set to true to have snapshot trigger the sensor again.
     uint32_t last_frame_ms;     // Last sampled frame timestamp in milliseconds.
     bool last_frame_ms_valid;   // Last sampled frame timestamp in milliseconds valid.
     omv_csi_gainceiling_t gainceiling;  // AGC gainceiling
@@ -744,6 +755,10 @@ int omv_csi_set_lens_correction(omv_csi_t *csi, int enable, int radi, int coef);
 
 // IOCTL function
 int omv_csi_ioctl(omv_csi_t *csi, int request, void *arg);
+
+// Sets the triggered mode and configures the frame sync pin for it. The pin is only
+// driven in the trigger out mode, so that an external device can drive it otherwise.
+void omv_csi_set_trigger_mode(omv_csi_t *csi, omv_csi_trigger_mode_t mode);
 
 // Set vsync callback function.
 int omv_csi_set_vsync_callback(omv_csi_t *csi, omv_csi_cb_t cb);
