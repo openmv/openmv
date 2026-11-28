@@ -32,6 +32,7 @@
 #include "omv_common.h"
 #include "omv_gpio.h"
 #include "omv_i2c.h"
+#include "omv_i3c.h"
 
 #define I2C_TIMEOUT         (1000)
 #define I2C_SCAN_TIMEOUT    (100)
@@ -115,6 +116,15 @@ int omv_i2c_init(omv_i2c_t *i2c, uint32_t bus_id, uint32_t speed) {
     i2c->initialized = false;
     i2c->scl_pin = NULL;
     i2c->sda_pin = NULL;
+
+    #if defined(HAL_I3C_MODULE_ENABLED)
+    // An I3C bus ID reaches its controller, which must be initialized first.
+    i2c->i3c = omv_i3c_get(bus_id);
+    if (i2c->i3c) {
+        i2c->initialized = true;
+        return 0;
+    }
+    #endif
 
     switch (bus_id) {
         #if defined(OMV_I2C1_ID)
@@ -283,6 +293,14 @@ static int omv_i2c_wait_timeout(omv_i2c_t *i2c, uint32_t timeout) {
 }
 
 int omv_i2c_deinit(omv_i2c_t *i2c) {
+    #if defined(HAL_I3C_MODULE_ENABLED)
+    if (i2c->i3c) {
+        i2c->i3c = NULL;
+        i2c->initialized = false;
+        return 0;
+    }
+    #endif
+
     if (i2c->initialized) {
         HAL_I2C_DeInit(i2c->inst);
         i2c->inst->Instance = NULL;
@@ -296,6 +314,13 @@ int omv_i2c_deinit(omv_i2c_t *i2c) {
 
 int omv_i2c_scan(omv_i2c_t *i2c, uint8_t *list, uint8_t size) {
     int idx = 0;
+
+    #if defined(HAL_I3C_MODULE_ENABLED)
+    if (i2c->i3c) {
+        return omv_i3c_scan(i2c->i3c, list, size);
+    }
+    #endif
+
     for (uint8_t addr = 0x09; addr <= 0x77; addr++) {
         if (HAL_I2C_IsDeviceReady(i2c->inst, addr << 1, 1, I2C_SCAN_TIMEOUT) == HAL_OK) {
             if (list == NULL || size == 0) {
@@ -330,6 +355,13 @@ static int omv_i2c_reset(omv_i2c_t *i2c) {
 }
 
 int omv_i2c_enable(omv_i2c_t *i2c, bool enable) {
+    #if defined(HAL_I3C_MODULE_ENABLED)
+    // Disabling the I3C controller would lose its configuration.
+    if (i2c->i3c) {
+        return 0;
+    }
+    #endif
+
     if (i2c->initialized) {
         if (enable) {
             __HAL_I2C_ENABLE(i2c->inst);
@@ -341,6 +373,12 @@ int omv_i2c_enable(omv_i2c_t *i2c, bool enable) {
 }
 
 int omv_i2c_gencall(omv_i2c_t *i2c, uint8_t cmd) {
+    #if defined(HAL_I3C_MODULE_ENABLED)
+    if (i2c->i3c) {
+        return omv_i3c_write(i2c->i3c, 0x00, &cmd, 1, OMV_I2C_XFER_NO_FLAGS);
+    }
+    #endif
+
     if (HAL_I2C_Master_Transmit(i2c->inst, 0x00, &cmd, 1, I2C_TIMEOUT) != HAL_OK) {
         omv_i2c_reset(i2c);
         return -1;
@@ -351,6 +389,13 @@ int omv_i2c_gencall(omv_i2c_t *i2c, uint8_t cmd) {
 int omv_i2c_read(omv_i2c_t *i2c, uint8_t slv_addr, uint8_t *buf, uint32_t len, uint32_t flags) {
     int ret = 0;
     uint32_t xfer_flags = 0;
+
+    #if defined(HAL_I3C_MODULE_ENABLED)
+    if (i2c->i3c) {
+        return omv_i3c_read(i2c->i3c, slv_addr, buf, len, flags);
+    }
+    #endif
+
     if (flags & OMV_I2C_XFER_NO_STOP) {
         xfer_flags |= I2C_FIRST_FRAME;
     } else if (flags & OMV_I2C_XFER_SUSPEND) {
@@ -374,6 +419,13 @@ int omv_i2c_read(omv_i2c_t *i2c, uint8_t slv_addr, uint8_t *buf, uint32_t len, u
 int omv_i2c_write(omv_i2c_t *i2c, uint8_t slv_addr, uint8_t *buf, uint32_t len, uint32_t flags) {
     int ret = 0;
     uint32_t xfer_flags = 0;
+
+    #if defined(HAL_I3C_MODULE_ENABLED)
+    if (i2c->i3c) {
+        return omv_i3c_write(i2c->i3c, slv_addr, buf, len, flags);
+    }
+    #endif
+
     if (flags & OMV_I2C_XFER_NO_STOP) {
         xfer_flags |= I2C_FIRST_FRAME;
     } else if (flags & OMV_I2C_XFER_SUSPEND) {
@@ -415,6 +467,17 @@ int omv_i2c_pulse_scl(omv_i2c_t *i2c) {
 }
 
 int omv_i2c_read_sccb(omv_i2c_t *i2c, uint8_t slv_addr, uint8_t reg_addr, uint8_t *data) {
+    #if defined(HAL_I3C_MODULE_ENABLED)
+    if (i2c->i3c) {
+        // SCCB protocol requires STOP between write and read phases.
+        if (omv_i3c_write(i2c->i3c, slv_addr, &reg_addr, 1, OMV_I2C_XFER_NO_FLAGS) != 0 ||
+            omv_i3c_read(i2c->i3c, slv_addr, data, 1, OMV_I2C_XFER_NO_FLAGS) != 0) {
+            return -1;
+        }
+        return 0;
+    }
+    #endif
+
     // SCCB protocol requires STOP between write and read phases.
     if (HAL_I2C_Master_Transmit(i2c->inst, slv_addr, &reg_addr, 1, I2C_TIMEOUT) != HAL_OK) {
         omv_i2c_reset(i2c);
@@ -431,6 +494,13 @@ int omv_i2c_read_sccb(omv_i2c_t *i2c, uint8_t slv_addr, uint8_t reg_addr, uint8_
 
 int omv_i2c_write_sccb(omv_i2c_t *i2c, uint8_t slv_addr, uint8_t reg_addr, uint8_t data) {
     uint8_t buf[] = {reg_addr, data};
+
+    #if defined(HAL_I3C_MODULE_ENABLED)
+    if (i2c->i3c) {
+        return omv_i3c_write(i2c->i3c, slv_addr, buf, 2, OMV_I2C_XFER_NO_FLAGS);
+    }
+    #endif
+
     if (HAL_I2C_Master_Transmit(i2c->inst, slv_addr, buf, 2, I2C_TIMEOUT) != HAL_OK) {
         omv_i2c_reset(i2c);
         return -1;
@@ -444,6 +514,16 @@ int omv_i2c_read_reg(omv_i2c_t *i2c, uint8_t slv_addr,
     uint16_t mem_addr_size = (addr_size == 1) ? I2C_MEMADD_SIZE_8BIT : I2C_MEMADD_SIZE_16BIT;
 
     uint8_t data_buf[4] = {0};
+
+    #if defined(HAL_I3C_MODULE_ENABLED)
+    if (i2c->i3c) {
+        uint8_t addr_buf[] = { reg_addr >> 8, reg_addr };
+        if (omv_i3c_write(i2c->i3c, slv_addr, &addr_buf[2 - addr_size], addr_size, OMV_I2C_XFER_NO_STOP) != 0 ||
+            omv_i3c_read(i2c->i3c, slv_addr, data_buf, data_size, OMV_I2C_XFER_NO_FLAGS) != 0) {
+            return -1;
+        }
+    } else
+    #endif
     if (HAL_I2C_Mem_Read(i2c->inst, slv_addr, reg_addr, mem_addr_size,
                          data_buf, data_size, I2C_TIMEOUT) != HAL_OK) {
         omv_i2c_reset(i2c);
@@ -481,6 +561,17 @@ int omv_i2c_write_reg(omv_i2c_t *i2c, uint8_t slv_addr,
     for (int i = 0; i < data_size; i++) {
         data_buf[i] = (data >> (8 * (data_size - 1 - i))) & 0xFF;
     }
+
+    #if defined(HAL_I3C_MODULE_ENABLED)
+    if (i2c->i3c) {
+        uint8_t addr_buf[] = { reg_addr >> 8, reg_addr };
+        if (omv_i3c_write(i2c->i3c, slv_addr, &addr_buf[2 - addr_size], addr_size, OMV_I2C_XFER_NO_STOP) != 0 ||
+            omv_i3c_write(i2c->i3c, slv_addr, data_buf, data_size, OMV_I2C_XFER_NO_FLAGS) != 0) {
+            return -1;
+        }
+        return 0;
+    }
+    #endif
 
     if (HAL_I2C_Mem_Write(i2c->inst, slv_addr, reg_addr, mem_addr_size,
                           data_buf, data_size, I2C_TIMEOUT) != HAL_OK) {

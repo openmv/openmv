@@ -82,6 +82,53 @@ typedef const stm32_gpio_t *omv_gpio_t;
 // IRQ handlers, if this I2C is enabled in Micropython, or defined and handled in stm32_hal_msp.c.
 typedef I2C_HandleTypeDef *omv_i2c_dev_t;
 
+#if defined(HAL_I3C_MODULE_ENABLED)
+#define OMV_I3C_MAX_DEVS        (4)
+#define OMV_I3C_CW_BUF_SIZE     (16)
+
+// A write, a read, or a write then a read with a repeated START.
+typedef struct _omv_i3c_frame {
+    I3C_XferTypeDef xfer;
+    I3C_PrivateTypeDef descr[2];
+    uint32_t count;
+    uint32_t option;
+} omv_i3c_frame_t;
+
+#define OMV_I3C_PORT_BITS                                 \
+    struct {                                              \
+        IRQn_Type ev_irqn;                                \
+        IRQn_Type er_irqn;                                \
+        uint32_t clk;                                     \
+        I3C_HandleTypeDef *descr;                         \
+        DMA_HandleTypeDef dma_descr_cr;                   \
+        DMA_HandleTypeDef dma_descr_tx;                   \
+        DMA_HandleTypeDef dma_descr_rx;                   \
+        uint32_t *dma_ctrl;                               \
+        uint8_t *dma_tx;                                  \
+        LL_I3C_CtrlBusConfTypeDef daa_timing;             \
+        I3C_DeviceConfTypeDef dyn_devs[OMV_I3C_MAX_DEVS]; \
+        uint32_t dyn_count;                               \
+        volatile bool busy;                               \
+        omv_i3c_frame_t frame;                            \
+        uint32_t ctrl[2];                                 \
+        volatile bool done;                               \
+        volatile bool failed;                             \
+        omv_i3c_frame_t dma_frame;                        \
+        volatile bool dma_pending;                        \
+        bool dma_active;                                  \
+        void *userdata;                                   \
+        omv_i3c_callback_t callback;                      \
+        uint8_t ibi_addr;                                 \
+        omv_i3c_ibi_callback_t ibi_callback;              \
+        void *ibi_data;                                   \
+        uint8_t cw_size;                                  \
+        uint8_t cw_buf[OMV_I3C_CW_BUF_SIZE];              \
+    };
+
+// Legacy I2C targets on an I3C bus are reached through its controller.
+#define OMV_I2C_PORT_BITS   struct _omv_i3c *i3c;
+#endif
+
 #if defined(STM32N6)
 #define OMV_I2C_MAX_8BIT_XFER   (65536U - 16U)
 #define OMV_I2C_MAX_16BIT_XFER  (32768U - 8U)

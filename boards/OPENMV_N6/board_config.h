@@ -129,6 +129,7 @@
 #define OMV_RCC_IC18_CLKDIV                 (60)
 
 #define OMV_OSC_I2C3_SOURCE                 (RCC_I2C3CLKSOURCE_IC10)
+#define OMV_OSC_I3C2_SOURCE                 (RCC_I3C2CLKSOURCE_IC10)
 #define OMV_OSC_SPI5_SOURCE                 (RCC_SPI5CLKSOURCE_IC14)
 #define OMV_OSC_USART2_SOURCE               (RCC_USART2CLKSOURCE_IC14)
 
@@ -225,6 +226,21 @@
 #define OMV_I2C4_ID                         (4)
 #define OMV_I2C4_SCL_PIN                    (&omv_pin_E13_I2C4)
 #define OMV_I2C4_SDA_PIN                    (&omv_pin_E14_I2C4)
+
+// Physical I3C buses.
+
+// I3C bus 2 (shares pins with I2C3)
+#define OMV_I3C2_ID                         (6)
+#define OMV_I3C2_SCL_PIN                    (&omv_pin_A8_I3C2)
+#define OMV_I3C2_SDA_PIN                    (&omv_pin_A9_I3C2)
+#define OMV_I3C2_DMA_CHANNEL_CR             (HPDMA1_Channel9)
+#define OMV_I3C2_DMA_CHANNEL_TX             (HPDMA1_Channel10)
+#define OMV_I3C2_DMA_CHANNEL_RX             (HPDMA1_Channel11)
+// The camera module's level shifters need a longer SCL high time for DAA,
+// and a slower push-pull clock to stay reliable while the PAG7936 shares
+// the bus. At 10 MHz, long frame reads end early about once a minute.
+#define OMV_I3C_DAA_SCL_HIGH_MIN_NS         (200)
+#define OMV_I3C_PP_FREQUENCY                (8000000)
 
 // Physical SPI buses.
 
